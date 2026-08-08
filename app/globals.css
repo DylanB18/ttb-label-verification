@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/*
+  Deliberately no dark-mode media query: stakeholder feedback ("my mother
+  could figure it out", half the review team over 50) called for a single,
+  predictable, high-contrast look rather than a theme that flips based on
+  OS settings the user didn't choose.
+*/
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 18px;
+}
