@@ -6,7 +6,7 @@ alcohol content, and net contents — and checks the Government Warning
 statement against the fixed federal wording. Built for the take-home
 described in [`docs/stakeholder-notes.md`](docs/stakeholder-notes.md).
 
-**Live demo:** _add deployed URL here_
+**Live demo:** https://ttb-label-verification-three.vercel.app
 
 ## Setup & Run
 
@@ -90,6 +90,14 @@ ABV (fail), and a warning statement in the wrong case (fail).
 - **papaparse** — CSV manifest parsing for batch mode.
 - **vitest** — unit tests for the comparison logic.
 - **Tailwind CSS** — styling.
+
+**Deployment note:** `tesseract.js` works out of the box locally, but
+Vercel's serverless build tracer can't see its dynamic `require()` calls (its
+Node worker script, `tesseract.js-core`'s WASM binaries, and a handful of the
+worker script's own runtime deps like `bmp-js`/`zlibjs`), so it silently
+dropped them from the deployed function and every OCR request hung until
+timeout. Fixed via `outputFileTracingIncludes` in `next.config.ts`, which
+explicitly tells Vercel to bundle those files.
 
 ## Design decisions driven directly by the stakeholder interviews
 
