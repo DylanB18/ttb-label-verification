@@ -99,24 +99,6 @@ dropped them from the deployed function and every OCR request hung until
 timeout. Fixed via `outputFileTracingIncludes` in `next.config.ts`, which
 explicitly tells Vercel to bundle those files.
 
-## Design decisions driven directly by the stakeholder interviews
-
-- **No dark mode, larger base font, high contrast, minimal navigation** —
-  Sarah's "my mother could figure it out" bar and half the team being over 50.
-- **Elapsed time shown on every result, target called out explicitly** — the
-  failed scanning-vendor pilot was specifically about speed (30-40s was a
-  dealbreaker); this app aims for single-digit seconds and shows its work.
-- **Non-numeric-timer progress indicator during processing** — feedback that
-  the app is working without dwelling on the exact clock, since speed is the
-  point but a literal countdown felt like the wrong emphasis.
-- **NEEDS REVIEW as a distinct status from FAIL** — directly from Dave's "you
-  need judgment" comment; the tool flags likely-benign mismatches for a human
-  rather than either auto-passing or auto-rejecting them.
-- **Batch upload** — Sarah/Janet's recurring ask for large importer batches.
-- **Warning statement checked automatically against fixed text, not typed by
-  the user** — it's federally mandated fixed language (see below), not
-  something that varies per application.
-
 ## Assumptions, trade-offs, and known limitations
 
 - **Standalone prototype, no COLA integration** — confirmed out of scope by
