@@ -45,11 +45,15 @@ from the IT interview.
 2. **Comparison (`lib/compare.ts`).** Pure, unit-tested rules, no LLM
    judgment involved in the pass/fail decision itself:
    - **Brand name / class-type:** normalized (case, punctuation, whitespace)
-     exact match → PASS; a close-but-not-identical match (Levenshtein
-     similarity ≥ 85%) → NEEDS REVIEW, to mirror the "STONE'S THROW" vs
-     "Stone's Throw" judgment call described in the agent interview, without
-     silently passing something that might be a genuine typo; anything
-     further off → FAIL.
+     exact match → PASS; a shortened/abbreviated form → PASS, flagged in the
+     reason text rather than silently treated as identical — e.g. "VERMOUTH"
+     vs "VERMOUTH DE CHAMBÉRY", or "Dolin" vs "MAISON DOLIN & CIE", where one
+     value's significant words are a subset of the other's; a
+     close-but-not-identical match that isn't a clean abbreviation
+     (Levenshtein similarity ≥ 85%) → NEEDS REVIEW, to mirror the "STONE'S
+     THROW" vs "Stone's Throw" judgment call described in the agent
+     interview, without silently passing something that might be a genuine
+     typo; anything further off → FAIL.
    - **Alcohol content / net contents:** parsed to a number (with unit
      conversion for net contents — mL/L/oz) and compared numerically. No
      fuzziness here; a number is either right or it isn't.
@@ -84,7 +88,13 @@ ABV (fail), and a warning statement in the wrong case (fail).
 - **tesseract.js** — OCR, runs in Node.
 - **Claude Haiku 4.5** (`@anthropic-ai/sdk`) — vision fallback extraction,
   chosen for being fast/cheap enough to fit the sub-5-second target even when
-  it's invoked.
+  it's invoked. The IT interview flags that the agency's network blocks
+  outbound calls to a lot of domains, so the fallback also supports
+  `VISION_BACKEND=local` (see `.env.local.example`), which sends the same
+  extraction prompt to a self-hosted Ollama-compatible vision model instead
+  of `api.anthropic.com`. This is wired up and unit-testable in isolation,
+  but not deployed or exercised against a real local model server — it's
+  scaffolding for that firewall scenario, not a verified production path.
 - **sharp** — used only by the test-label generator, to rasterize SVG label
   mockups into PNGs.
 - **papaparse** — CSV manifest parsing for batch mode.
@@ -103,6 +113,12 @@ explicitly tells Vercel to bundle those files.
 
 - **Standalone prototype, no COLA integration** — confirmed out of scope by
   the IT interview.
+- **Checked fields are brand name, class/type, ABV, net contents, and the
+  Government Warning** — matching the day-to-day check Sarah describes
+  ("brand name matches? ABV correct? warning there?"). TTB's fuller
+  mandatory-label list also includes bottler/producer name & address and
+  country of origin (imports); those aren't extracted or compared here —
+  a deliberate scope cut for the take-home window, not an oversight.
 - **Government Warning text verified against ttb.gov.** The exact statutory
   wording used here (`lib/types.ts`) was cross-checked against TTB's public
   guidance, not just the take-home prompt:

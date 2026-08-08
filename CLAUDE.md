@@ -34,6 +34,27 @@ this; only Vercel's own file tracing does.
   with; it got overwritten once by `create-next-app`'s scaffolding and was
   restored from conversation context — keep it as the canonical brief, don't
   regenerate it from memory.
+- `lib/compare.ts`'s `compareTextField` (brand name, class/type) passes
+  shortened/abbreviated values outright — e.g. "VERMOUTH" vs "VERMOUTH DE
+  CHAMBÉRY", or "Dolin" vs "MAISON DOLIN & CIE" — via `isAbbreviationMatch`
+  (one value's significant words are a subset of the other's, past a small
+  legal/connective-word stoplist). Status is `pass` with a reason noting the
+  abbreviation, not `needs_review` — per stakeholder guidance, a shortened
+  name/class isn't "meaningfully different" and shouldn't drag the overall
+  verdict down. The government warning has no equivalent leniency; it's
+  still checked word-for-word.
+- `lib/visionExtract.ts`'s vision fallback can run against a self-hosted
+  model instead of the Anthropic API — set `VISION_BACKEND=local` plus
+  `LOCAL_VISION_URL` (default `http://localhost:11434/api/chat`, i.e. an
+  Ollama instance) and `LOCAL_VISION_MODEL` (default `llava`). This exists
+  for deployments behind an outbound firewall that blocks
+  `api.anthropic.com`. The local path has no forced tool-calling, so it
+  asks for raw JSON (`format: "json"`) and validates the shape instead of
+  trusting a schema — if you swap in a different local server, keep that
+  validation, don't assume well-formed output. Not deployed/tested against
+  a real local model yet; the OCR path (`lib/ocr.ts`, tesseract.js) already
+  requires no network call at all, so `local` is currently only exercised
+  as the low-confidence/missing-field fallback, same as the Anthropic path.
 
 ## Design system ("modern federal digital service")
 

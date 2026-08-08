@@ -38,6 +38,22 @@ describe("buildVerdict", () => {
     expect(overallStatus).toBe("pass");
   });
 
+  it("passes an abbreviated class/type outright (VERMOUTH vs VERMOUTH DE CHAMBÉRY)", () => {
+    const label: LabelFields = { ...matchingLabel, classType: "VERMOUTH" };
+    const exp: ExpectedFields = { ...expected, classType: "VERMOUTH DE CHAMBÉRY" };
+    const { fields, overallStatus } = buildVerdict(label, exp);
+    expect(fieldFor(fields, "classType").status).toBe("pass");
+    expect(overallStatus).toBe("pass");
+  });
+
+  it("passes an abbreviated brand name outright (Dolin vs MAISON DOLIN & CIE)", () => {
+    const label: LabelFields = { ...matchingLabel, brandName: "Dolin" };
+    const exp: ExpectedFields = { ...expected, brandName: "MAISON DOLIN & CIE" };
+    const { fields, overallStatus } = buildVerdict(label, exp);
+    expect(fieldFor(fields, "brandName").status).toBe("pass");
+    expect(overallStatus).toBe("pass");
+  });
+
   it("flags a near-miss brand name (likely OCR misread) as needs_review, not fail", () => {
     const label: LabelFields = { ...matchingLabel, brandName: "Old Tim Distillery" };
     const { fields, overallStatus } = buildVerdict(label, expected);

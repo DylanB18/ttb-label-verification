@@ -45,6 +45,32 @@ function normalizeWhitespace(s: string): string {
 
 const TEXT_MATCH_THRESHOLD = 0.85;
 
+// Words common in legal/business names or connective text that shouldn't by
+// themselves block an abbreviation match (e.g. "Dolin" vs "MAISON DOLIN & CIE").
+const ABBREVIATION_STOPWORDS = new Set(["the", "a", "an", "of", "de", "la", "le", "and", "co", "inc", "llc", "ltd", "company", "cie"]);
+
+function significantWords(s: string): string[] {
+  return normalizeText(s)
+    .split(" ")
+    .filter((w) => w.length > 0 && !ABBREVIATION_STOPWORDS.has(w));
+}
+
+/**
+ * True if one value's significant words are a subset of the other's — e.g.
+ * "Vermouth" vs "Vermouth de Chambéry", or "Dolin" vs "Maison Dolin & Cie".
+ * Name/class fields may legitimately be shortened on the label vs. the
+ * application, so these are treated as matches (flagged, not failed).
+ */
+function isAbbreviationMatch(a: string, b: string): boolean {
+  const wordsA = significantWords(a);
+  const wordsB = significantWords(b);
+  if (wordsA.length === 0 || wordsB.length === 0) return false;
+
+  const [shorter, longer] = wordsA.length <= wordsB.length ? [wordsA, wordsB] : [wordsB, wordsA];
+  const longerSet = new Set(longer);
+  return shorter.every((w) => longerSet.has(w));
+}
+
 function compareTextField(
   field: FieldResult["field"],
   label: string,
@@ -60,6 +86,17 @@ function compareTextField(
 
   if (normExpected === normExtracted) {
     return { field, label, expected, extracted, status: "pass", reason: "Matches application exactly (case/punctuation-insensitive)." };
+  }
+
+  if (isAbbreviationMatch(normExpected, normExtracted)) {
+    return {
+      field,
+      label,
+      expected,
+      extracted,
+      status: "pass",
+      reason: "Shortened/abbreviated form of the application value (e.g. dropped a qualifier or legal suffix) — not meaningfully different. Flagged for awareness, but passed.",
+    };
   }
 
   const similarity = similarityRatio(normExpected, normExtracted);
