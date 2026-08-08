@@ -91,19 +91,19 @@ export default function BatchLabelPage() {
 
   return (
     <div className="space-y-8">
-      <Link href="/" className="text-blue-700 underline">
+      <Link href="/" className="text-navy underline decoration-brass decoration-2 underline-offset-2">
         ← Back
       </Link>
-      <h1 className="text-3xl font-bold">Check a Batch of Labels</h1>
+      <h1 className="font-serif text-3xl font-semibold text-navy">Check a Batch of Labels</h1>
 
       <form onSubmit={onSubmit} className="space-y-6">
         <div>
-          <label className="block text-lg font-semibold mb-2" htmlFor="manifest">
-            1. Application details (CSV or JSON)
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.15em] text-ink/60" htmlFor="manifest">
+            1 — Application details (CSV or JSON)
           </label>
-          <p className="text-sm text-neutral-600 mb-2">
-            One row per label, with a <code>fileName</code> that matches an uploaded image&apos;s file name.{" "}
-            <a href="/batch-template.csv" download className="text-blue-700 underline">
+          <p className="text-sm text-ink/60 mb-2">
+            One row per label, with a <code className="font-mono">fileName</code> that matches an uploaded image&apos;s file name.{" "}
+            <a href="/batch-template.csv" download className="text-navy underline decoration-brass decoration-2 underline-offset-2">
               Download a template CSV
             </a>
             .
@@ -114,15 +114,15 @@ export default function BatchLabelPage() {
             accept=".csv,.json,text/csv,application/json"
             required
             onChange={(e) => setManifestFile(e.target.files?.[0] ?? null)}
-            className="block w-full rounded-lg border-2 border-neutral-400 p-3 text-base"
+            className="block w-full rounded-sm border-2 border-navy/40 bg-paper p-3 text-base"
           />
         </div>
 
         <div>
-          <label className="block text-lg font-semibold mb-2" htmlFor="images">
-            2. Label images
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.15em] text-ink/60" htmlFor="images">
+            2 — Label images
           </label>
-          <p className="text-sm text-neutral-600 mb-2">Up to {MAX_BATCH_IMAGES} images per batch in this prototype.</p>
+          <p className="text-sm text-ink/60 mb-2">Up to {MAX_BATCH_IMAGES} images per batch in this prototype.</p>
           <input
             id="images"
             type="file"
@@ -130,15 +130,15 @@ export default function BatchLabelPage() {
             multiple
             required
             onChange={(e) => setImageFiles(Array.from(e.target.files ?? []))}
-            className="block w-full rounded-lg border-2 border-neutral-400 p-3 text-base"
+            className="block w-full rounded-sm border-2 border-navy/40 bg-paper p-3 text-base"
           />
-          {imageFiles.length > 0 && <p className="mt-2 text-sm text-neutral-600">{imageFiles.length} image(s) selected.</p>}
+          {imageFiles.length > 0 && <p className="mt-2 text-sm text-ink/60">{imageFiles.length} image(s) selected.</p>}
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-neutral-900 py-4 text-xl font-bold text-white disabled:opacity-50"
+          className="w-full rounded-sm bg-navy py-4 text-xl font-semibold text-paper transition-colors hover:bg-navy-dark disabled:opacity-50"
         >
           {loading ? "Checking labels… this can take a bit for large batches" : "Check Batch"}
         </button>
@@ -146,35 +146,40 @@ export default function BatchLabelPage() {
 
       {loading && <ProcessingIndicator variant="batch" />}
 
-      {error && <p className="rounded-lg bg-red-100 p-4 text-red-900 font-semibold">{error}</p>}
+      {error && <p className="rounded-sm border-2 border-stamp-fail/40 bg-stamp-fail/[0.06] p-4 font-semibold text-stamp-fail">{error}</p>}
 
       {results && summary && (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-neutral-900 p-5">
-            <div className="text-lg font-semibold">
-              {results.length} labels checked — {summary.pass} pass, {summary.needsReview} need review, {summary.fail} fail
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-sm border-2 border-navy p-5">
+            <div className="font-mono text-sm text-ink">
+              {results.length} LABELS CHECKED — {summary.pass} PASS, {summary.needsReview} NEED REVIEW, {summary.fail} FAIL
             </div>
-            <button onClick={downloadResultsCsv} className="rounded-lg border-2 border-neutral-900 px-4 py-2 font-semibold hover:bg-neutral-100">
+            <button
+              onClick={downloadResultsCsv}
+              className="rounded-sm border-2 border-navy px-4 py-2 font-semibold text-navy transition-colors hover:bg-navy hover:text-paper"
+            >
               Download results CSV
             </button>
           </div>
 
           <ul className="space-y-3">
             {results.map((row) => (
-              <li key={row.fileName} className="rounded-lg border border-neutral-300 p-4">
+              <li key={row.fileName} className="rounded-sm border border-navy/25 bg-paper p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-mono text-sm">{row.fileName}</span>
+                  <span className="font-mono text-sm text-ink">{row.fileName}</span>
                   <StatusBadge status={row.overallStatus} />
                 </div>
-                {row.error && <p className="mt-2 text-sm text-red-700">{row.error}</p>}
+                {row.error && <p className="mt-2 text-sm text-stamp-fail">{row.error}</p>}
                 {row.fields.length > 0 && (
                   <details className="mt-2">
-                    <summary className="cursor-pointer text-sm text-blue-700 underline">Show field details</summary>
+                    <summary className="cursor-pointer text-sm text-navy underline decoration-brass decoration-2 underline-offset-2">
+                      Show field details
+                    </summary>
                     <ul className="mt-2 space-y-2">
                       {row.fields.map((field) => (
                         <li key={field.field} className="text-sm">
-                          <span className="font-semibold">{field.label}:</span> <StatusBadge status={field.status} />
-                          <div className="text-neutral-600">
+                          <span className="font-semibold text-ink">{field.label}:</span> <StatusBadge status={field.status} />
+                          <div className="font-mono text-ink/60">
                             Application: {field.expected || "—"} · Label: {field.extracted || "(not found)"} · {field.reason}
                           </div>
                         </li>

@@ -1,15 +1,38 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* "Official inspection ledger" palette — grounded in Treasury's own navy
+     and brass, not a decorative accent color. Ink colors (pass/fail/review)
+     read as stamp ink, not generic UI red/green. */
+  --paper: #f5f2ea;
+  --ink: #1c2b3a;
+  --navy: #1b3a5c;
+  --navy-dark: #12283f;
+  --brass: #9c7a2e;
+  --brass-light: #c9a227;
+  --stamp-pass: #2e5e3e;
+  --stamp-fail: #8c3527;
+  --stamp-review: #96661c;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-navy: var(--navy);
+  --color-navy-dark: var(--navy-dark);
+  --color-brass: var(--brass);
+  --color-brass-light: var(--brass-light);
+  --color-stamp-pass: var(--stamp-pass);
+  --color-stamp-fail: var(--stamp-fail);
+  --color-stamp-review: var(--stamp-review);
+  --font-sans: var(--font-plex-sans);
+  --font-serif: var(--font-fraunces);
+  --font-mono: var(--font-plex-mono);
 }
 
 /*
@@ -21,6 +44,37 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-plex-sans), Arial, Helvetica, sans-serif;
   font-size: 18px;
+}
+
+/* Visible, high-contrast focus ring everywhere — no reliance on color alone. */
+:focus-visible {
+  outline: 3px solid var(--brass);
+  outline-offset: 2px;
+}
+
+@keyframes stamp-in {
+  0% {
+    opacity: 0;
+    transform: scale(1.6) rotate(-10deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(0.94) rotate(-2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-3deg);
+  }
+}
+
+.stamp-mark {
+  animation: stamp-in 320ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stamp-mark {
+    animation: none;
+  }
 }

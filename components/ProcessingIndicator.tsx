@@ -23,9 +23,13 @@ export default function ProcessingIndicator({ variant = "single" }: { variant?: 
   }, [stages.length]);
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border-2 border-neutral-300 bg-neutral-50 p-4" role="status" aria-live="polite">
-      <span className="h-6 w-6 flex-shrink-0 animate-spin rounded-full border-4 border-neutral-300 border-t-neutral-900" aria-hidden="true" />
-      <span className="text-base font-medium text-neutral-700">{stages[stageIndex]}</span>
+    <div className="flex items-center gap-4 rounded-sm border-2 border-navy/30 bg-paper p-4" role="status" aria-live="polite">
+      <span className="flex flex-shrink-0 gap-1.5" aria-hidden="true">
+        <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-brass [animation-delay:-0.3s]" />
+        <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-brass [animation-delay:-0.15s]" />
+        <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-brass" />
+      </span>
+      <span className="font-mono text-sm text-ink/80">{stages[stageIndex]}</span>
     </div>
   );
 }
