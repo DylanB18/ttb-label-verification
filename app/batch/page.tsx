@@ -98,7 +98,7 @@ export default function BatchLabelPage() {
 
       <form onSubmit={onSubmit} className="space-y-6">
         <div>
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.15em] text-ink/60" htmlFor="manifest">
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.1em] text-ink/60" htmlFor="manifest">
             1 — Application details (CSV or JSON)
           </label>
           <p className="text-sm text-ink/60 mb-2">
@@ -114,12 +114,12 @@ export default function BatchLabelPage() {
             accept=".csv,.json,text/csv,application/json"
             required
             onChange={(e) => setManifestFile(e.target.files?.[0] ?? null)}
-            className="block w-full rounded-sm border-2 border-navy/40 bg-paper p-3 text-base"
+            className="block w-full rounded-md border border-ink/25 bg-paper p-3 text-base"
           />
         </div>
 
         <div>
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.15em] text-ink/60" htmlFor="images">
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.1em] text-ink/60" htmlFor="images">
             2 — Label images
           </label>
           <p className="text-sm text-ink/60 mb-2">Up to {MAX_BATCH_IMAGES} images per batch in this prototype.</p>
@@ -130,7 +130,7 @@ export default function BatchLabelPage() {
             multiple
             required
             onChange={(e) => setImageFiles(Array.from(e.target.files ?? []))}
-            className="block w-full rounded-sm border-2 border-navy/40 bg-paper p-3 text-base"
+            className="block w-full rounded-md border border-ink/25 bg-paper p-3 text-base"
           />
           {imageFiles.length > 0 && <p className="mt-2 text-sm text-ink/60">{imageFiles.length} image(s) selected.</p>}
         </div>
@@ -138,7 +138,7 @@ export default function BatchLabelPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-sm bg-navy py-4 text-xl font-semibold text-paper transition-colors hover:bg-navy-dark disabled:opacity-50"
+          className="w-full rounded-md bg-brass py-4 text-xl font-semibold text-paper transition-colors hover:bg-navy disabled:opacity-50"
         >
           {loading ? "Checking labels… this can take a bit for large batches" : "Check Batch"}
         </button>
@@ -146,17 +146,17 @@ export default function BatchLabelPage() {
 
       {loading && <ProcessingIndicator variant="batch" />}
 
-      {error && <p className="rounded-sm border-2 border-stamp-fail/40 bg-stamp-fail/[0.06] p-4 font-semibold text-stamp-fail">{error}</p>}
+      {error && <p className="rounded-md border border-stamp-fail/30 border-l-4 bg-stamp-fail/[0.06] p-4 font-semibold text-stamp-fail" style={{ borderLeftColor: "var(--stamp-fail)" }}>{error}</p>}
 
       {results && summary && (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-sm border-2 border-navy p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ink/10 bg-surface p-5">
             <div className="font-mono text-sm text-ink">
-              {results.length} LABELS CHECKED — {summary.pass} PASS, {summary.needsReview} NEED REVIEW, {summary.fail} FAIL
+              {results.length} labels checked — {summary.pass} pass, {summary.needsReview} need review, {summary.fail} fail
             </div>
             <button
               onClick={downloadResultsCsv}
-              className="rounded-sm border-2 border-navy px-4 py-2 font-semibold text-navy transition-colors hover:bg-navy hover:text-paper"
+              className="rounded-md border-2 border-navy px-4 py-2 font-semibold text-navy transition-colors hover:bg-navy hover:text-paper"
             >
               Download results CSV
             </button>
@@ -164,7 +164,7 @@ export default function BatchLabelPage() {
 
           <ul className="space-y-3">
             {results.map((row) => (
-              <li key={row.fileName} className="rounded-sm border border-navy/25 bg-paper p-4">
+              <li key={row.fileName} className="rounded-md border border-ink/10 bg-paper p-4 shadow-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-mono text-sm text-ink">{row.fileName}</span>
                   <StatusBadge status={row.overallStatus} />

@@ -7,24 +7,28 @@ export default function ResultChecklist({ result }: { result: VerificationResult
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-sm border-2 border-navy bg-paper p-6">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border border-ink/10 bg-paper p-6 shadow-sm">
         <StatusBadge status={result.overallStatus} size="lg" />
-        <div className="text-right font-mono text-xs text-ink/70">
+        <div className="text-right font-mono text-xs text-ink/60">
           <div>
-            RESULT IN <span className={withinTarget ? "font-semibold text-stamp-pass" : "font-semibold text-stamp-fail"}>{seconds}s</span>
+            Result in <span className={withinTarget ? "font-semibold text-stamp-pass" : "font-semibold text-stamp-fail"}>{seconds}s</span>
             {!withinTarget && " (over 5s target)"}
           </div>
           <div>
-            {result.extractionSource === "ocr" ? "OCR ONLY" : "OCR + AI VISION"} · CONFIDENCE {Math.round(result.ocrConfidence)}%
+            {result.extractionSource === "ocr" ? "OCR only" : "OCR + AI vision"} · confidence {Math.round(result.ocrConfidence)}%
           </div>
         </div>
       </div>
 
       <ul className="space-y-3">
         {result.fields.map((field) => (
-          <li key={field.field} className="rounded-sm border border-navy/25 bg-paper p-4">
+          <li
+            key={field.field}
+            className="rounded-md border border-ink/10 border-l-4 bg-paper p-4 shadow-sm"
+            style={{ borderLeftColor: `var(--${field.status === "pass" ? "stamp-pass" : field.status === "fail" ? "stamp-fail" : "stamp-review"})` }}
+          >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-serif text-lg font-semibold text-navy">{field.label}</span>
+              <span className="text-lg font-semibold text-navy">{field.label}</span>
               <StatusBadge status={field.status} />
             </div>
             <dl className="mt-3 grid gap-2 font-mono text-sm sm:grid-cols-2">

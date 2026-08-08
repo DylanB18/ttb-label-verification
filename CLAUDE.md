@@ -35,21 +35,26 @@ this; only Vercel's own file tracing does.
   restored from conversation context — keep it as the canonical brief, don't
   regenerate it from memory.
 
-## Design system ("official inspection ledger")
+## Design system ("modern federal digital service")
 
-Palette and type tokens live in `app/globals.css` (`--paper`, `--ink`,
-`--navy`, `--navy-dark`, `--brass`, `--brass-light`, `--stamp-pass`,
-`--stamp-fail`, `--stamp-review`) and are exposed as Tailwind utilities
-(`bg-navy`, `text-brass`, etc.) via the `@theme inline` block — use those
-tokens rather than Tailwind's default palette (`neutral-*`, `blue-*`) so new
-UI stays visually consistent. Fonts: Fraunces (serif, headings only, via
-`font-serif`), IBM Plex Sans (body, default), IBM Plex Mono (`font-mono`, for
-the application-vs-label comparison values and any status/data display — the
+Originally styled as a vintage "inspection ledger" (cream paper, italic
+serif, rotated ink-stamp badges); re-skinned toward a modern,
+USWDS-influenced federal look (white surfaces, systematic type, solid status
+chips) per stakeholder request. Palette and type tokens still live in
+`app/globals.css` (`--paper`, `--surface`, `--ink`, `--navy`, `--navy-dark`,
+`--brass`, `--brass-light`, `--stamp-pass`, `--stamp-fail`, `--stamp-review`)
+and are exposed as Tailwind utilities (`bg-navy`, `text-brass`, etc.) via the
+`@theme inline` block — use those tokens rather than Tailwind's default
+palette (`neutral-*`, `blue-*`) so new UI stays visually consistent. `--brass`
+is now a Treasury-blue accent (not literal brass) — kept the variable name so
+existing utility classes didn't need a rename. Fonts: Fraunces (serif, used
+sparingly for page-level `<h1>`s only, non-italic, via `font-serif`), IBM
+Plex Sans (body/UI default), IBM Plex Mono (`font-mono`, for the
+application-vs-label comparison values and any status/data display — the
 mono treatment is deliberate, it reinforces that the match must be exact).
-`StatusBadge`'s `lg` size is the one signature element (a rotated,
-double-bordered "ink stamp" for the overall verdict) — keep that visual
-weight concentrated there; `md` (used in per-field rows) stays flat/static on
-purpose.
+`StatusBadge`'s `lg` size is the one signature element (a solid, filled
+status chip for the overall verdict) — keep that visual weight concentrated
+there; `md` (used in per-field rows) stays outlined/flat on purpose.
 
 Accessibility constraints are load-bearing, not decorative — they came
 directly from the stakeholder interviews (agent's mother testing it, half

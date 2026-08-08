@@ -94,16 +94,16 @@ export default function SingleLabelPage() {
       </Link>
       <h1 className="font-serif text-3xl font-semibold text-navy">Check One Label</h1>
 
-      <div className="rounded-sm border-2 border-brass/50 bg-brass/[0.06] p-4">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-brass">No label handy? Try a sample</p>
+      <div className="rounded-lg border border-ink/10 bg-surface p-4">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.1em] text-navy">No label handy? Try a sample</p>
         <div className="flex flex-wrap gap-2">
           {SAMPLE_LABELS.map((sample) => (
             <button
               key={sample.fileName}
               type="button"
               onClick={() => loadSample(sample)}
-              className={`rounded-sm border-2 px-3 py-2 text-sm font-semibold transition-colors ${
-                activeSample === sample.fileName ? "border-navy bg-navy text-paper" : "border-navy bg-paper text-navy hover:bg-navy/[0.06]"
+              className={`rounded-full border-2 px-3 py-2 text-sm font-semibold transition-colors ${
+                activeSample === sample.fileName ? "border-navy bg-navy text-paper" : "border-navy/30 bg-paper text-navy hover:border-navy"
               }`}
             >
               {sample.description}
@@ -114,7 +114,7 @@ export default function SingleLabelPage() {
 
       <form onSubmit={onSubmit} className="space-y-6">
         <div>
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.15em] text-ink/60" htmlFor="image">
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.1em] text-ink/60" htmlFor="image">
             1 — Label image
           </label>
           <input
@@ -122,16 +122,16 @@ export default function SingleLabelPage() {
             type="file"
             accept="image/png,image/jpeg,image/webp,image/gif"
             onChange={(e) => onImageChange(e.target.files?.[0] ?? null)}
-            className="block w-full rounded-sm border-2 border-navy/40 bg-paper p-3 text-base"
+            className="block w-full rounded-md border border-ink/25 bg-paper p-3 text-base"
           />
           {previewUrl && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={previewUrl} alt="Label preview" className="mt-3 max-h-72 rounded-sm border border-navy/30" />
+            <img src={previewUrl} alt="Label preview" className="mt-3 max-h-72 rounded-md border border-ink/15" />
           )}
         </div>
 
-        <fieldset className="space-y-4 rounded-sm border-2 border-navy/40 p-4">
-          <legend className="px-2 text-xs font-semibold uppercase tracking-[0.15em] text-ink/60">2 — What the application says</legend>
+        <fieldset className="space-y-4 rounded-lg border border-ink/15 p-4">
+          <legend className="px-2 text-xs font-semibold uppercase tracking-[0.1em] text-ink/60">2 — What the application says</legend>
 
           <Field id="brandName" label="Brand Name" value={brandName} onChange={setBrandName} placeholder="e.g. Old Tom Distillery" />
           <Field id="classType" label="Class / Type" value={classType} onChange={setClassType} placeholder="e.g. Kentucky Straight Bourbon Whiskey" />
@@ -145,7 +145,7 @@ export default function SingleLabelPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-sm bg-navy py-4 text-xl font-semibold text-paper transition-colors hover:bg-navy-dark disabled:opacity-50"
+          className="w-full rounded-md bg-brass py-4 text-xl font-semibold text-paper transition-colors hover:bg-navy disabled:opacity-50"
         >
           {loading ? "Checking…" : "Check Label"}
         </button>
@@ -153,7 +153,7 @@ export default function SingleLabelPage() {
 
       {loading && <ProcessingIndicator />}
 
-      {error && <p className="rounded-sm border-2 border-stamp-fail/40 bg-stamp-fail/[0.06] p-4 font-semibold text-stamp-fail">{error}</p>}
+      {error && <p className="rounded-md border border-stamp-fail/30 border-l-4 bg-stamp-fail/[0.06] p-4 font-semibold text-stamp-fail" style={{ borderLeftColor: "var(--stamp-fail)" }}>{error}</p>}
       {result && <ResultChecklist result={result} />}
     </div>
   );
@@ -184,7 +184,7 @@ function Field({
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="block w-full rounded-sm border-2 border-navy/40 bg-paper p-3 font-mono text-base"
+        className="block w-full rounded-md border border-ink/25 bg-paper p-3 font-mono text-base"
       />
     </div>
   );

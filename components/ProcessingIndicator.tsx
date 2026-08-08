@@ -23,7 +23,7 @@ export default function ProcessingIndicator({ variant = "single" }: { variant?: 
   }, [stages.length]);
 
   return (
-    <div className="flex items-center gap-4 rounded-sm border-2 border-navy/30 bg-paper p-4" role="status" aria-live="polite">
+    <div className="flex items-center gap-4 rounded-md border border-ink/10 bg-surface p-4" role="status" aria-live="polite">
       <span className="flex flex-shrink-0 gap-1.5" aria-hidden="true">
         <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-brass [animation-delay:-0.3s]" />
         <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-brass [animation-delay:-0.15s]" />

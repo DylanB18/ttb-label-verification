@@ -32,20 +32,35 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`h-full antialiased ${fraunces.variable} ${plexSans.variable} ${plexMono.variable}`}>
       <body className="min-h-full flex flex-col bg-paper text-ink">
-        <header className="border-b-2 border-navy bg-paper">
+        <div className="bg-surface">
+          <div className="mx-auto flex max-w-4xl items-center gap-2 px-6 py-2 text-sm text-ink/70">
+            <FlagIcon className="h-4 w-4 flex-shrink-0 text-navy" />
+            <span>An official-style prototype for the U.S. Department of the Treasury</span>
+          </div>
+        </div>
+        <header className="border-b border-ink/10 bg-navy">
           <div className="mx-auto max-w-4xl px-6 py-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brass">Alcohol &amp; Tobacco Tax and Trade Bureau — Prototype</p>
-            <Link href="/" className="mt-1 block font-serif text-3xl font-semibold italic no-underline text-navy">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brass-light">Alcohol &amp; Tobacco Tax and Trade Bureau — Prototype</p>
+            <Link href="/" className="mt-1 block font-serif text-3xl font-semibold no-underline text-paper">
               Label Verification
             </Link>
-            <p className="mt-1 text-base text-ink/70">Checks a label image against the application record</p>
+            <p className="mt-1 text-base text-paper/75">Checks a label image against the application record</p>
           </div>
         </header>
         <main className="flex-1 mx-auto w-full max-w-4xl px-6 py-8">{children}</main>
-        <footer className="border-t border-navy/20 py-6 text-center text-sm text-ink/60">
+        <footer className="border-t border-ink/10 py-6 text-center text-sm text-ink/60">
           Standalone prototype. Not connected to COLA.
         </footer>
       </body>
     </html>
+  );
+}
+
+function FlagIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M4 2v16" />
+      <path d="M4 3h11l-2.2 3L15 9H4" />
+    </svg>
   );
 }

@@ -8,11 +8,11 @@ const STYLES: Record<FieldStatus, { ink: string; label: string; Icon: (props: { 
 };
 
 /**
- * The signature element: verdicts render as an ink-stamp mark, the way a
- * reviewing agent would actually stamp a label approved/rejected. `lg` is
- * the one animated, rotated stamp used for the overall verdict; `md` is a
- * flatter, static version for the repeated per-field rows so the boldness
- * stays concentrated in one place per result.
+ * The signature element: the overall verdict renders as a solid, high-contrast
+ * status chip — the same status-communication device used across the app,
+ * scaled up. `lg` is the filled version used once per result; `md` is an
+ * outlined version for the repeated per-field rows so the boldness stays
+ * concentrated in one place per result.
  */
 export default function StatusBadge({ status, size = "md" }: { status: FieldStatus; size?: "md" | "lg" }) {
   const s = STYLES[status];
@@ -20,13 +20,8 @@ export default function StatusBadge({ status, size = "md" }: { status: FieldStat
   if (size === "lg") {
     return (
       <span
-        className="stamp-mark inline-flex items-center gap-2 rounded-sm border-[3px] px-5 py-2.5 font-mono text-xl font-medium uppercase tracking-[0.15em]"
-        style={{
-          color: s.ink,
-          borderColor: s.ink,
-          boxShadow: `inset 0 0 0 3px var(--paper), inset 0 0 0 4px ${s.ink}`,
-          transform: "rotate(-3deg)",
-        }}
+        className="stamp-mark inline-flex items-center gap-2.5 rounded-md px-5 py-2.5 font-sans text-lg font-semibold uppercase tracking-[0.08em] text-paper"
+        style={{ backgroundColor: s.ink }}
       >
         <s.Icon className="h-5 w-5" />
         {s.label}
@@ -36,7 +31,7 @@ export default function StatusBadge({ status, size = "md" }: { status: FieldStat
 
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-sm border-2 px-2.5 py-1 font-mono text-sm font-medium uppercase tracking-[0.1em]"
+      className="inline-flex items-center gap-1.5 rounded-full border-2 px-2.5 py-1 font-sans text-sm font-semibold uppercase tracking-[0.04em]"
       style={{ color: s.ink, borderColor: s.ink }}
     >
       <s.Icon className="h-3.5 w-3.5" />

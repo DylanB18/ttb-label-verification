@@ -3,12 +3,12 @@ import Link from "next/link";
 export default function HomePage() {
   return (
     <div className="space-y-8">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brass">Select a review type</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brass">Select a review type</p>
 
       <div className="grid gap-6 sm:grid-cols-2">
         <Link
           href="/single"
-          className="group block rounded-sm border-2 border-navy bg-paper p-8 text-center no-underline text-ink transition-colors hover:border-brass hover:bg-navy/[0.03]"
+          className="group block rounded-lg border border-ink/10 bg-paper p-8 text-center no-underline text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:border-brass hover:shadow-md"
         >
           <DocumentIcon className="mx-auto h-10 w-10 text-navy group-hover:text-brass" />
           <div className="mt-4 font-serif text-2xl font-semibold text-navy">Check One Label</div>
@@ -17,7 +17,7 @@ export default function HomePage() {
 
         <Link
           href="/batch"
-          className="group block rounded-sm border-2 border-navy bg-paper p-8 text-center no-underline text-ink transition-colors hover:border-brass hover:bg-navy/[0.03]"
+          className="group block rounded-lg border border-ink/10 bg-paper p-8 text-center no-underline text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:border-brass hover:shadow-md"
         >
           <StackIcon className="mx-auto h-10 w-10 text-navy group-hover:text-brass" />
           <div className="mt-4 font-serif text-2xl font-semibold text-navy">Check a Batch of Labels</div>
