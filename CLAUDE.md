@@ -119,12 +119,28 @@ the review team over 50): 18px base font, no dark-mode media query, visible
 `:focus-visible` ring, status conveyed by icon *and* text label, never color
 alone. Preserve all of these in any future styling pass.
 
+## Architecture
+
+`lib/verifyPipeline.ts` is the orchestrator both API routes call into
+(`app/api/verify/route.ts` for a single label, `app/api/batch/route.ts` for
+a manifest of many). It runs `lib/ocr.ts` (tesseract.js) and
+`lib/visionExtract.ts` (Claude Haiku / local vision) concurrently, then
+hands both results to `lib/compare.ts`'s `buildVerdict` for the pure,
+unit-tested pass/fail/needs_review logic. Supporting modules:
+`lib/parseFields.ts` (regex field extraction from raw OCR text),
+`lib/types.ts` (shared domain types + the canonical warning text),
+`lib/concurrency.ts` (bounded-parallelism worker pool used by batch mode),
+`lib/sampleLabels.ts` (the bundled try-it-without-a-label samples),
+`lib/rateLimit.ts` + `lib/limits.ts` (per-IP throttling and size caps for
+the public deployment).
+
 ## Commands
 
 ```bash
 npm run dev                   # local dev (Turbopack)
 npm run build                 # production build — do this before deploying
 npm test                      # vitest, lib/__tests__/compare.test.ts
+npm run lint                  # eslint
 npm run generate-test-labels  # regenerate test-labels/ + public/samples/
 vercel --prod                 # deploy (CLI already linked to dbober/ttb-label-verification)
 ```
