@@ -1,4 +1,4 @@
-# TTB Label Verification (Prototype)
+# TTB Label Verification
 
 A standalone prototype that checks an alcohol beverage label photo against the
 application data an agent would enter for it — brand name, class/type,
