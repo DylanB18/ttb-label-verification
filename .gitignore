@@ -46,3 +46,6 @@ next-env.d.ts
 
 # tesseract.js downloads its language data file to the working directory at runtime
 eng.traineddata
+
+# local reference material (e.g. downloaded TTB manuals) — not part of the deliverable
+/docs/*.pdf
