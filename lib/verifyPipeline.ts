@@ -14,14 +14,17 @@ const defaultRecognizer: Recognizer = { recognize: runOcr };
 
 /**
  * Runs the full extraction + comparison pipeline for one label image.
- * OCR runs first and is authoritative for brand/class/ABV/net-contents/
- * warning-text whenever it's confident and complete — that's the fast,
- * free path. Vision always runs too, because the Government Warning's
- * formatting (bold lead-in, non-bold body, visual separation) is a
- * judgment about the image itself that OCR text has no way to express;
- * vision's field extraction is only *used* to fill gaps when OCR fell
- * short. A failed vision call degrades to a needs_review formatting
- * result rather than failing the whole request.
+ * OCR is authoritative for brand/class/ABV/net-contents/warning-text
+ * whenever it's confident and complete — that's the fast, free path.
+ * Vision always runs too, because the Government Warning's formatting
+ * (bold lead-in, non-bold body, visual separation) is a judgment about the
+ * image itself that OCR text has no way to express; vision's field
+ * extraction is only *used* to fill gaps when OCR fell short. OCR and
+ * vision run concurrently (they don't depend on each other) since vision
+ * is now unconditional — running them sequentially would add its full
+ * latency on top of OCR's on every request, risking the 5-second target.
+ * A failed vision call degrades to a needs_review formatting result
+ * rather than failing the whole request.
  */
 export async function verifyLabel(
   imageBuffer: Buffer,
@@ -31,21 +34,35 @@ export async function verifyLabel(
 ): Promise<VerificationResult> {
   const start = Date.now();
 
-  const ocrResult = await recognizer.recognize(imageBuffer);
+  let mediaType: ReturnType<typeof mediaTypeFromMime> | null = null;
+  try {
+    mediaType = mediaTypeFromMime(mime);
+  } catch {
+    // Unsupported mime — vision assessment below will be skipped; OCR (and
+    // the route's own mime validation) still runs/applies as normal.
+  }
+
+  const [ocrSettled, visionSettled] = await Promise.allSettled([
+    recognizer.recognize(imageBuffer),
+    mediaType ? runVisionAssessment(imageBuffer, mediaType) : Promise.reject(new Error(`Unsupported image type: ${mime}`)),
+  ]);
+
+  if (ocrSettled.status === "rejected") throw ocrSettled.reason;
+  const ocrResult = ocrSettled.value;
+
   let fields = parseFieldsFromOcrText(ocrResult.text);
   let extractionSource: "ocr" | "ocr+vision" = "ocr";
   let warningFormat: WarningFormatCheck | null = null;
 
   const needsVisionForFields = ocrResult.confidence < OCR_CONFIDENCE_THRESHOLD || !isExtractionComplete(fields);
-  try {
-    const assessment = await runVisionAssessment(imageBuffer, mediaTypeFromMime(mime));
-    warningFormat = assessment.warningFormat;
+  if (visionSettled.status === "fulfilled") {
+    warningFormat = visionSettled.value.warningFormat;
     if (needsVisionForFields) {
-      fields = mergeFields(fields, assessment.fields);
+      fields = mergeFields(fields, visionSettled.value.fields);
       extractionSource = "ocr+vision";
     }
-  } catch (err) {
-    console.error("Vision assessment failed — warning formatting can't be verified, and OCR-only fields are used:", err);
+  } else {
+    console.error("Vision assessment failed — warning formatting can't be verified, and OCR-only fields are used:", visionSettled.reason);
   }
 
   const { fields: fieldResults, overallStatus } = buildVerdict(fields, expected, warningFormat);
