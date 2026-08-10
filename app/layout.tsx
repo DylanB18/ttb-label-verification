@@ -35,7 +35,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <div className="bg-surface">
           <div className="mx-auto flex max-w-4xl items-center gap-2 px-6 py-2 text-sm text-ink/70">
             <FlagIcon className="h-4 w-4 flex-shrink-0 text-navy" />
-            <span>An official-style prototype for the U.S. Department of the Treasury</span>
+            <span>A prototype for the U.S. Department of the Treasury</span>
           </div>
         </div>
         <header className="border-b border-ink/10 bg-navy">

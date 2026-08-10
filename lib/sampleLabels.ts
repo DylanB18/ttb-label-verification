@@ -79,6 +79,21 @@ export const SAMPLE_LABELS: SampleLabel[] = [
     },
   },
   {
+    fileName: "warning-not-bold.png",
+    imagePath: "/samples/warning-not-bold.png",
+    description: "Government warning lead-in not bold — formatting fail",
+    expected: {
+      beverageType: "spirits",
+      brandName: "Old Tom Distillery",
+      classType: "Kentucky Straight Bourbon Whiskey",
+      alcoholContent: "45%",
+      netContents: "750 mL",
+      nameAddress: "Old Tom Distillery, Louisville, KY",
+      isImport: false,
+      countryOfOrigin: "",
+    },
+  },
+  {
     fileName: "wine-table-wine-exempt.png",
     imagePath: "/samples/wine-table-wine-exempt.png",
     description: "Wine, no ABV printed — exempt at ≤14%, still passes",

@@ -47,6 +47,8 @@ interface LabelSpec {
   /** Only set for imports, e.g. "PRODUCT OF SCOTLAND". */
   countryOfOriginLine?: string;
   warningLines: string[];
+  /** Whether the "GOVERNMENT WARNING:" lead-in (first line, up to the first colon) renders bold. Defaults to true — set false to produce a formatting-fail sample. */
+  warningLeadInBold?: boolean;
 }
 
 function buildSvg(spec: LabelSpec): string {
@@ -89,12 +91,26 @@ function buildSvg(spec: LabelSpec): string {
   }
 
   y += 70;
-  for (const line of spec.warningLines) {
-    parts.push(
-      `<text x="${WIDTH / 2}" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="20" text-anchor="middle">${escapeXml(line)}</text>`,
-    );
+  const leadInBold = spec.warningLeadInBold !== false;
+  spec.warningLines.forEach((line, index) => {
+    if (index === 0) {
+      // Split the lead-in ("GOVERNMENT WARNING:" or a title-case/reworded
+      // variant) into its own tspan so it can render at a different weight
+      // than the rest of the statement — TTB requires the lead-in bold and
+      // the body not bold.
+      const colonIndex = line.indexOf(":");
+      const leadIn = colonIndex === -1 ? line : line.slice(0, colonIndex + 1);
+      const rest = colonIndex === -1 ? "" : line.slice(colonIndex + 1);
+      parts.push(
+        `<text x="${WIDTH / 2}" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="20" text-anchor="middle"><tspan font-weight="${leadInBold ? "bold" : "normal"}">${escapeXml(leadIn)}</tspan>${escapeXml(rest)}</text>`,
+      );
+    } else {
+      parts.push(
+        `<text x="${WIDTH / 2}" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="20" text-anchor="middle">${escapeXml(line)}</text>`,
+      );
+    }
     y += 30;
-  }
+  });
 
   parts.push(`</svg>`);
   return parts.join("\n");
@@ -167,6 +183,15 @@ const singleLabels: Record<string, LabelSpec> = {
     netLine: "750 mL",
     nameAddressLine: OLD_TOM_NAME_ADDRESS,
     warningLines: REWORDED_WARNING_LINES,
+  },
+  "warning-not-bold.png": {
+    brandName: "OLD TOM DISTILLERY",
+    classType: "Kentucky Straight Bourbon Whiskey",
+    abvLine: "45% Alc./Vol. (90 Proof)",
+    netLine: "750 mL",
+    nameAddressLine: OLD_TOM_NAME_ADDRESS,
+    warningLines: CANONICAL_WARNING_LINES,
+    warningLeadInBold: false,
   },
   "missing-warning.png": {
     brandName: "OLD TOM DISTILLERY",

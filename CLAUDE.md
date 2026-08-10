@@ -117,6 +117,25 @@ this; only Vercel's own file tracing does.
 - **Batch manifests default a missing `beverageType` column to `spirits`**
   (`app/api/batch/route.ts`'s `normalizeRow`), so manifests written before
   this field existed keep working unchanged rather than erroring per-row.
+- `pdftotext -layout docs/<name>.pdf /tmp/out.txt` is what extracted the TTB
+  Beverage Alcohol Manual PDFs in `docs/` into readable text this session —
+  `-layout` preserves the manuals' indented bullet structure, plain
+  `pdftotext` doesn't. Useful again if more TTB reference PDFs get added.
+- `scripts/generate-test-labels.ts`'s `buildSvg` splits the first warning
+  line into two `<tspan>`s so the "GOVERNMENT WARNING:" lead-in (everything
+  up to the first colon) renders bold and the remainder doesn't — this is
+  what lets the bundled samples actually exercise
+  `governmentWarningFormat`'s pass path instead of leaving it to vision
+  chance. `LabelSpec.warningLeadInBold` (default `true`) flips this off for
+  `warning-not-bold.png`, a dedicated formatting-fail sample — before this,
+  no bundled sample deterministically triggered the formatting-fail path.
+  Any new warning-related sample should set this deliberately rather than
+  leaving it to default.
+- Batch manifest CSV values with commas (name/address, e.g. "Old Tom
+  Distillery, Louisville, KY") must be quoted —
+  `scripts/generate-test-labels.ts` has a `csvField()` helper for this;
+  don't reintroduce a naive `.join(",")` when adding manifest columns or
+  hand-editing the CSV.
 
 ## Design system ("modern federal digital service")
 
