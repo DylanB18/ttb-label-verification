@@ -73,6 +73,24 @@ this; only Vercel's own file tracing does.
   verdict). It doesn't attempt the minimum-type-size-vs-container-volume
   TTB rule — no physical scale reference exists in a photo — that's
   documented as a known gap in README, not silently dropped.
+- **`verifyPipeline.ts` runs OCR and the vision assessment concurrently**
+  (`Promise.allSettled`), not sequentially. They don't depend on each other
+  (vision's fields are only *used* if OCR falls short), but since vision
+  became unconditional (see above), running them one after another was
+  measured on the live deployment stacking to 5.6–7.0s — over the
+  stakeholder's 5-second requirement. Concurrent, it's back to ~3.4–4.4s
+  (max of the two, not their sum). If you add a third
+  extraction/assessment step, run it concurrently too rather than adding it
+  to the sequential chain — sequential vision calls are what broke this
+  once already.
+- **When staging files, use explicit paths, not `git add -A`.** A prior
+  session's `-A` swept in three PDFs the user was independently downloading
+  into `docs/` at the same moment (unrelated to the code changes being
+  committed) and pushed them before anyone noticed. They were removed from
+  tracking in a follow-up commit and `/docs/*.pdf` is now gitignored (local
+  reference material, not part of the deliverable) — but the real fix is
+  reviewing `git status --short` before staging, not the gitignore rule
+  alone, since any new non-PDF stray file would slip through the same way.
 
 ## Design system ("modern federal digital service")
 
