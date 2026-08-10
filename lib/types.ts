@@ -18,12 +18,27 @@ export interface ExpectedFields {
 }
 
 export interface FieldResult {
-  field: "brandName" | "classType" | "alcoholContent" | "netContents" | "governmentWarning";
+  field: "brandName" | "classType" | "alcoholContent" | "netContents" | "governmentWarning" | "governmentWarningFormat";
   label: string;
   expected: string;
   extracted: string | null;
   status: FieldStatus;
   reason: string;
+}
+
+/**
+ * Visual assessment of the Government Warning statement's formatting —
+ * whether "GOVERNMENT WARNING:" is bold and the rest isn't, and whether the
+ * statement is set off from other label text. This can't be derived from
+ * OCR text (no font-weight/layout signal), so it always requires a vision
+ * model call, unlike the other fields which OCR can often handle alone.
+ * Each field is null if the vision call couldn't locate the warning at all.
+ */
+export interface WarningFormatCheck {
+  boldLeadIn: boolean | null;
+  restNotBold: boolean | null;
+  visuallySeparated: boolean | null;
+  notes: string | null;
 }
 
 export interface VerificationResult {

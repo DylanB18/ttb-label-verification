@@ -15,7 +15,7 @@ export default function ResultChecklist({ result }: { result: VerificationResult
             {!withinTarget && " (over 5s target)"}
           </div>
           <div>
-            {result.extractionSource === "ocr" ? "OCR only" : "OCR + AI vision"} · confidence {Math.round(result.ocrConfidence)}%
+            {result.extractionSource === "ocr" ? "OCR + AI formatting check" : "OCR + AI vision"} · confidence {Math.round(result.ocrConfidence)}%
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildVerdict } from "../compare";
-import { CANONICAL_GOVERNMENT_WARNING, type ExpectedFields, type LabelFields } from "../types";
+import { CANONICAL_GOVERNMENT_WARNING, type ExpectedFields, type LabelFields, type WarningFormatCheck } from "../types";
 
 const expected: ExpectedFields = {
   brandName: "Old Tom Distillery",
@@ -17,6 +17,13 @@ const matchingLabel: LabelFields = {
   governmentWarning: CANONICAL_GOVERNMENT_WARNING,
 };
 
+const wellFormattedWarning: WarningFormatCheck = {
+  boldLeadIn: true,
+  restNotBold: true,
+  visuallySeparated: true,
+  notes: null,
+};
+
 function fieldFor(fields: ReturnType<typeof buildVerdict>["fields"], key: string) {
   const f = fields.find((f) => f.field === key);
   if (!f) throw new Error(`missing field ${key}`);
@@ -25,7 +32,7 @@ function fieldFor(fields: ReturnType<typeof buildVerdict>["fields"], key: string
 
 describe("buildVerdict", () => {
   it("passes every field on a clean match", () => {
-    const { overallStatus, fields } = buildVerdict(matchingLabel, expected);
+    const { overallStatus, fields } = buildVerdict(matchingLabel, expected, wellFormattedWarning);
     expect(overallStatus).toBe("pass");
     for (const f of fields) expect(f.status).toBe("pass");
   });
@@ -33,7 +40,7 @@ describe("buildVerdict", () => {
   it("passes a case/punctuation-only brand name difference outright (STONE'S THROW vs Stone's Throw)", () => {
     const label: LabelFields = { ...matchingLabel, brandName: "STONE'S THROW" };
     const exp: ExpectedFields = { ...expected, brandName: "Stone's Throw" };
-    const { fields, overallStatus } = buildVerdict(label, exp);
+    const { fields, overallStatus } = buildVerdict(label, exp, wellFormattedWarning);
     expect(fieldFor(fields, "brandName").status).toBe("pass");
     expect(overallStatus).toBe("pass");
   });
@@ -41,7 +48,7 @@ describe("buildVerdict", () => {
   it("passes an abbreviated class/type outright (VERMOUTH vs VERMOUTH DE CHAMBÉRY)", () => {
     const label: LabelFields = { ...matchingLabel, classType: "VERMOUTH" };
     const exp: ExpectedFields = { ...expected, classType: "VERMOUTH DE CHAMBÉRY" };
-    const { fields, overallStatus } = buildVerdict(label, exp);
+    const { fields, overallStatus } = buildVerdict(label, exp, wellFormattedWarning);
     expect(fieldFor(fields, "classType").status).toBe("pass");
     expect(overallStatus).toBe("pass");
   });
@@ -49,7 +56,7 @@ describe("buildVerdict", () => {
   it("passes an abbreviated brand name outright (Dolin vs MAISON DOLIN & CIE)", () => {
     const label: LabelFields = { ...matchingLabel, brandName: "Dolin" };
     const exp: ExpectedFields = { ...expected, brandName: "MAISON DOLIN & CIE" };
-    const { fields, overallStatus } = buildVerdict(label, exp);
+    const { fields, overallStatus } = buildVerdict(label, exp, wellFormattedWarning);
     expect(fieldFor(fields, "brandName").status).toBe("pass");
     expect(overallStatus).toBe("pass");
   });
@@ -129,5 +136,43 @@ describe("buildVerdict", () => {
     const label: LabelFields = { ...matchingLabel, brandName: null };
     const { fields } = buildVerdict(label, expected);
     expect(fieldFor(fields, "brandName").status).toBe("fail");
+  });
+
+  it("flags warning formatting as needs_review when no vision check was made", () => {
+    const { fields, overallStatus } = buildVerdict(matchingLabel, expected, null);
+    expect(fieldFor(fields, "governmentWarningFormat").status).toBe("needs_review");
+    expect(overallStatus).toBe("needs_review");
+  });
+
+  it("passes warning formatting when the lead-in is bold, the body isn't, and it's set off from other text", () => {
+    const { fields } = buildVerdict(matchingLabel, expected, wellFormattedWarning);
+    expect(fieldFor(fields, "governmentWarningFormat").status).toBe("pass");
+  });
+
+  it("fails warning formatting when the lead-in isn't bold", () => {
+    const check: WarningFormatCheck = { ...wellFormattedWarning, boldLeadIn: false };
+    const { fields, overallStatus } = buildVerdict(matchingLabel, expected, check);
+    const result = fieldFor(fields, "governmentWarningFormat");
+    expect(result.status).toBe("fail");
+    expect(result.reason).toMatch(/not in bold/i);
+    expect(overallStatus).toBe("fail");
+  });
+
+  it("fails warning formatting when the whole statement is bold, not just the lead-in", () => {
+    const check: WarningFormatCheck = { ...wellFormattedWarning, restNotBold: false };
+    const { fields } = buildVerdict(matchingLabel, expected, check);
+    expect(fieldFor(fields, "governmentWarningFormat").status).toBe("fail");
+  });
+
+  it("fails warning formatting when the statement isn't visually set off from other text", () => {
+    const check: WarningFormatCheck = { ...wellFormattedWarning, visuallySeparated: false };
+    const { fields } = buildVerdict(matchingLabel, expected, check);
+    expect(fieldFor(fields, "governmentWarningFormat").status).toBe("fail");
+  });
+
+  it("fails warning formatting when the vision check couldn't locate the warning at all", () => {
+    const check: WarningFormatCheck = { boldLeadIn: null, restNotBold: null, visuallySeparated: null, notes: null };
+    const { fields } = buildVerdict(matchingLabel, expected, check);
+    expect(fieldFor(fields, "governmentWarningFormat").status).toBe("fail");
   });
 });

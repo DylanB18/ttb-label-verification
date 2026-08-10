@@ -1,8 +1,8 @@
 import { runOcr, type OcrResult } from "./ocr";
 import { parseFieldsFromOcrText, isExtractionComplete } from "./parseFields";
-import { extractFieldsWithVision, mediaTypeFromMime } from "./visionExtract";
+import { runVisionAssessment, mediaTypeFromMime } from "./visionExtract";
 import { buildVerdict } from "./compare";
-import type { ExpectedFields, LabelFields, VerificationResult } from "./types";
+import type { ExpectedFields, LabelFields, VerificationResult, WarningFormatCheck } from "./types";
 
 const OCR_CONFIDENCE_THRESHOLD = 70;
 
@@ -13,9 +13,15 @@ interface Recognizer {
 const defaultRecognizer: Recognizer = { recognize: runOcr };
 
 /**
- * Runs the full extraction + comparison pipeline for one label image:
- * OCR first, then Claude Haiku vision only if OCR confidence is low or a
- * required field is missing (keeps the common case fast and cheap).
+ * Runs the full extraction + comparison pipeline for one label image.
+ * OCR runs first and is authoritative for brand/class/ABV/net-contents/
+ * warning-text whenever it's confident and complete — that's the fast,
+ * free path. Vision always runs too, because the Government Warning's
+ * formatting (bold lead-in, non-bold body, visual separation) is a
+ * judgment about the image itself that OCR text has no way to express;
+ * vision's field extraction is only *used* to fill gaps when OCR fell
+ * short. A failed vision call degrades to a needs_review formatting
+ * result rather than failing the whole request.
  */
 export async function verifyLabel(
   imageBuffer: Buffer,
@@ -28,19 +34,21 @@ export async function verifyLabel(
   const ocrResult = await recognizer.recognize(imageBuffer);
   let fields = parseFieldsFromOcrText(ocrResult.text);
   let extractionSource: "ocr" | "ocr+vision" = "ocr";
+  let warningFormat: WarningFormatCheck | null = null;
 
-  const needsVision = ocrResult.confidence < OCR_CONFIDENCE_THRESHOLD || !isExtractionComplete(fields);
-  if (needsVision) {
-    try {
-      const visionFields = await extractFieldsWithVision(imageBuffer, mediaTypeFromMime(mime));
-      fields = mergeFields(fields, visionFields);
+  const needsVisionForFields = ocrResult.confidence < OCR_CONFIDENCE_THRESHOLD || !isExtractionComplete(fields);
+  try {
+    const assessment = await runVisionAssessment(imageBuffer, mediaTypeFromMime(mime));
+    warningFormat = assessment.warningFormat;
+    if (needsVisionForFields) {
+      fields = mergeFields(fields, assessment.fields);
       extractionSource = "ocr+vision";
-    } catch (err) {
-      console.error("Vision fallback failed, proceeding with OCR-only result:", err);
     }
+  } catch (err) {
+    console.error("Vision assessment failed — warning formatting can't be verified, and OCR-only fields are used:", err);
   }
 
-  const { fields: fieldResults, overallStatus } = buildVerdict(fields, expected);
+  const { fields: fieldResults, overallStatus } = buildVerdict(fields, expected, warningFormat);
 
   return {
     overallStatus,

@@ -43,18 +43,36 @@ this; only Vercel's own file tracing does.
   name/class isn't "meaningfully different" and shouldn't drag the overall
   verdict down. The government warning has no equivalent leniency; it's
   still checked word-for-word.
-- `lib/visionExtract.ts`'s vision fallback can run against a self-hosted
-  model instead of the Anthropic API — set `VISION_BACKEND=local` plus
-  `LOCAL_VISION_URL` (default `http://localhost:11434/api/chat`, i.e. an
-  Ollama instance) and `LOCAL_VISION_MODEL` (default `llava`). This exists
-  for deployments behind an outbound firewall that blocks
-  `api.anthropic.com`. The local path has no forced tool-calling, so it
-  asks for raw JSON (`format: "json"`) and validates the shape instead of
-  trusting a schema — if you swap in a different local server, keep that
-  validation, don't assume well-formed output. Not deployed/tested against
-  a real local model yet; the OCR path (`lib/ocr.ts`, tesseract.js) already
-  requires no network call at all, so `local` is currently only exercised
-  as the low-confidence/missing-field fallback, same as the Anthropic path.
+- `lib/visionExtract.ts`'s vision call (`runVisionAssessment`) can run
+  against a self-hosted model instead of the Anthropic API — set
+  `VISION_BACKEND=local` plus `LOCAL_VISION_URL` (default
+  `http://localhost:11434/api/chat`, i.e. an Ollama instance) and
+  `LOCAL_VISION_MODEL` (default `llava`). This exists for deployments
+  behind an outbound firewall that blocks `api.anthropic.com`. The local
+  path has no forced tool-calling, so it asks for raw JSON (`format:
+  "json"`) and validates the shape instead of trusting a schema — if you
+  swap in a different local server, keep that validation, don't assume
+  well-formed output. Not deployed/tested against a real local model yet.
+- **Vision now runs on every `/api/verify` request, not just as an OCR
+  fallback.** `runVisionAssessment` (`lib/visionExtract.ts`) returns both
+  extracted fields *and* a Government Warning formatting judgment (bold
+  lead-in / non-bold body / visually set off from other text) in one call —
+  bold/layout is a purely visual property tesseract.js (or any OCR text
+  output) has no way to express, so this can't be an OCR-confidence-gated
+  fallback like the field extraction is. `verifyPipeline.ts` calls it
+  unconditionally but only *uses* its field values to fill OCR gaps
+  (`needsVisionForFields`); the formatting result is always used. This
+  means every request — and every image in a batch — now pays for one
+  Claude Haiku call minimum, not just low-confidence ones; see the
+  "formatting check" bullets in README's latency/cost-guardrail sections
+  before changing rate limits or `MAX_BATCH_IMAGES`.
+- `lib/compare.ts`'s `compareWarningFormatting` turns that vision judgment
+  into a `governmentWarningFormat` field result (`pass`/`fail` based on the
+  three booleans; `needs_review` only if the vision call itself errored, so
+  a transient failure doesn't silently disappear formatting from the
+  verdict). It doesn't attempt the minimum-type-size-vs-container-volume
+  TTB rule — no physical scale reference exists in a photo — that's
+  documented as a known gap in README, not silently dropped.
 
 ## Design system ("modern federal digital service")
 

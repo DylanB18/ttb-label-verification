@@ -1,4 +1,4 @@
-import { CANONICAL_GOVERNMENT_WARNING, type ExpectedFields, type FieldResult, type FieldStatus, type LabelFields } from "./types";
+import { CANONICAL_GOVERNMENT_WARNING, type ExpectedFields, type FieldResult, type FieldStatus, type LabelFields, type WarningFormatCheck } from "./types";
 
 /** Levenshtein edit distance between two strings. */
 function levenshtein(a: string, b: string): number {
@@ -275,19 +275,87 @@ function compareGovernmentWarning(extracted: string | null): FieldResult {
   };
 }
 
+const WARNING_FORMAT_EXPECTED = '"GOVERNMENT WARNING:" in bold, rest of the statement not bold, visually set off from other label text';
+
+/**
+ * Bold lead-in / non-bold body / visual separation can't be read from OCR
+ * text — this is a judgment call about the image itself, so `check` always
+ * comes from a vision model call (see lib/visionExtract.ts). `check` is
+ * null when that call wasn't made or failed, which is flagged for manual
+ * review rather than silently skipped.
+ */
+function compareWarningFormatting(check: WarningFormatCheck | null): FieldResult {
+  const field = "governmentWarningFormat" as const;
+  const label = "Warning Formatting";
+
+  if (!check) {
+    return {
+      field,
+      label,
+      expected: WARNING_FORMAT_EXPECTED,
+      extracted: null,
+      status: "needs_review",
+      reason: "Formatting could not be checked automatically — please confirm visually that \"GOVERNMENT WARNING:\" is bold and the statement is set off from other label text.",
+    };
+  }
+
+  const { boldLeadIn, restNotBold, visuallySeparated, notes } = check;
+
+  if (boldLeadIn === null || restNotBold === null || visuallySeparated === null) {
+    return {
+      field,
+      label,
+      expected: WARNING_FORMAT_EXPECTED,
+      extracted: notes,
+      status: "fail",
+      reason: "The government warning wasn't visible clearly enough on the label to assess its formatting.",
+    };
+  }
+
+  if (boldLeadIn && restNotBold && visuallySeparated) {
+    return {
+      field,
+      label,
+      expected: WARNING_FORMAT_EXPECTED,
+      extracted: notes ?? "Bold lead-in, rest not bold, visually set off from other text.",
+      status: "pass",
+      reason: "Warning lead-in is bold, the rest of the statement is not, and it's visually set off from other label text.",
+    };
+  }
+
+  const problems: string[] = [];
+  if (!boldLeadIn) problems.push('"GOVERNMENT WARNING:" is not in bold type');
+  if (!restNotBold) problems.push("the rest of the statement also appears bold (only the lead-in should be)");
+  if (!visuallySeparated) problems.push("the statement is not visually set off from other label text");
+
+  return {
+    field,
+    label,
+    expected: WARNING_FORMAT_EXPECTED,
+    extracted: notes,
+    status: "fail",
+    reason: `Formatting does not meet TTB requirements: ${problems.join("; ")}.`,
+  };
+}
+
 function overallStatus(fields: FieldResult[]): FieldStatus {
   if (fields.some((f) => f.status === "fail")) return "fail";
   if (fields.some((f) => f.status === "needs_review")) return "needs_review";
   return "pass";
 }
 
-export function buildVerdict(extracted: LabelFields, expected: ExpectedFields): { fields: FieldResult[]; overallStatus: FieldStatus } {
+export function buildVerdict(
+  extracted: LabelFields,
+  expected: ExpectedFields,
+  warningFormat: WarningFormatCheck | null = null,
+): { fields: FieldResult[]; overallStatus: FieldStatus } {
   const fields: FieldResult[] = [
     compareTextField("brandName", "Brand Name", expected.brandName, extracted.brandName),
     compareTextField("classType", "Class/Type", expected.classType, extracted.classType),
     compareAbv(expected.alcoholContent, extracted.alcoholContent),
     compareNetContents(expected.netContents, extracted.netContents),
     compareGovernmentWarning(extracted.governmentWarning),
+    compareWarningFormatting(warningFormat),
   ];
 
   return { fields, overallStatus: overallStatus(fields) };

@@ -2,9 +2,11 @@
 
 A standalone prototype that checks an alcohol beverage label photo against the
 application data an agent would enter for it — brand name, class/type,
-alcohol content, and net contents — and checks the Government Warning
-statement against the fixed federal wording. Built for the take-home
-described in [`docs/stakeholder-notes.md`](docs/stakeholder-notes.md).
+alcohol content, and net contents — checks the Government Warning statement
+against the fixed federal wording, and assesses whether that warning is
+formatted the way TTB requires (bold lead-in, non-bold body, visually set
+off from other label text). Built for the take-home described in
+[`docs/stakeholder-notes.md`](docs/stakeholder-notes.md).
 
 **Live demo:** https://ttb-label-verification-three.vercel.app
 
@@ -32,16 +34,21 @@ from the IT interview.
 
 ## How it works
 
-1. **Extraction (hybrid OCR + vision fallback).** Every label image first
-   goes through [`tesseract.js`](https://github.com/naptha/tesseract.js) OCR
-   (`lib/ocr.ts`, `lib/parseFields.ts`). If OCR confidence is low or a
-   required field wasn't found, the same image is sent to **Claude Haiku
-   4.5** (`lib/visionExtract.ts`) with a forced structured tool call, and its
-   output fills in the gaps. This keeps the common case cheap and fast while
-   still handling labels plain OCR struggles with — during testing, generic
-   OCR reliably dropped large stylized brand-name headers even on a clean,
-   computer-generated label, which is exactly the failure mode the vision
-   fallback exists to catch.
+1. **Extraction (hybrid OCR + vision, plus an always-on vision formatting
+   check).** Every label image first goes through
+   [`tesseract.js`](https://github.com/naptha/tesseract.js) OCR
+   (`lib/ocr.ts`, `lib/parseFields.ts`) for the five text/numeric fields. If
+   OCR confidence is low or a required field wasn't found, **Claude Haiku
+   4.5** (`lib/visionExtract.ts`) fills in the gaps with a forced structured
+   tool call — this keeps the common case cheap and fast while still
+   handling labels plain OCR struggles with (during testing, generic OCR
+   reliably dropped large stylized brand-name headers even on a clean,
+   computer-generated label). Separately, **every request** — regardless of
+   OCR confidence — also gets a vision call to assess the Government
+   Warning's formatting (bold lead-in, non-bold body, visual separation from
+   other text), because that's a judgment about the image itself that OCR
+   text has no way to express. When both are needed, they're one combined
+   call, not two, to keep latency and cost down.
 2. **Comparison (`lib/compare.ts`).** Pure, unit-tested rules, no LLM
    judgment involved in the pass/fail decision itself:
    - **Brand name / class-type:** normalized (case, punctuation, whitespace)
@@ -57,10 +64,17 @@ from the IT interview.
    - **Alcohol content / net contents:** parsed to a number (with unit
      conversion for net contents — mL/L/oz) and compared numerically. No
      fuzziness here; a number is either right or it isn't.
-   - **Government Warning:** compared **exactly, case-sensitive**, against
-     the fixed statutory text, and separately checks that "GOVERNMENT
-     WARNING:" is in all caps — this is what catches the title-case rejection
-     example from the agent interview.
+   - **Government Warning (wording):** compared **exactly, case-sensitive**,
+     against the fixed statutory text, and separately checks that
+     "GOVERNMENT WARNING:" is in all caps — this is what catches the
+     title-case rejection example from the agent interview.
+   - **Government Warning (formatting):** driven by the vision model's
+     boolean judgment (bold lead-in / non-bold body / visually set off), not
+     text comparison — PASS only if all three hold; FAIL with the specific
+     problem(s) named if any don't, or if the vision call couldn't locate
+     the warning in the image; NEEDS REVIEW only if the vision call itself
+     failed (network error, backend down), so formatting gets a human look
+     rather than a silent skip.
 3. **Verdict:** PASS if every field passes; NEEDS REVIEW if nothing failed
    but something needs a human look; FAIL if anything failed outright.
 
@@ -86,14 +100,15 @@ ABV (fail), and a warning statement in the wrong case (fail).
   run server-side (Node runtime) so OCR and the Anthropic SDK don't need to
   ship to the browser.
 - **tesseract.js** — OCR, runs in Node.
-- **Claude Haiku 4.5** (`@anthropic-ai/sdk`) — vision fallback extraction,
-  chosen for being fast/cheap enough to fit the sub-5-second target even when
-  it's invoked. The IT interview flags that the agency's network blocks
-  outbound calls to a lot of domains, so the fallback also supports
+- **Claude Haiku 4.5** (`@anthropic-ai/sdk`) — chosen for being fast/cheap
+  enough to fit the sub-5-second target even though, unlike a pure fallback,
+  the warning-formatting check now calls it on every request, not just when
+  OCR is uncertain. The IT interview flags that the agency's network blocks
+  outbound calls to a lot of domains, so vision also supports
   `VISION_BACKEND=local` (see `.env.local.example`), which sends the same
-  extraction prompt to a self-hosted Ollama-compatible vision model instead
-  of `api.anthropic.com`. This is wired up and unit-testable in isolation,
-  but not deployed or exercised against a real local model server — it's
+  prompt to a self-hosted Ollama-compatible vision model instead of
+  `api.anthropic.com`. This is wired up and unit-testable in isolation, but
+  not deployed or exercised against a real local model server — it's
   scaffolding for that firewall scenario, not a verified production path.
 - **sharp** — used only by the test-label generator, to rasterize SVG label
   mockups into PNGs.
@@ -125,10 +140,15 @@ explicitly tells Vercel to bundle those files.
   - [TTB — Distilled Spirits Labeling: Health Warning Statement](https://www.ttb.gov/regulated-commodities/beverage-alcohol/distilled-spirits/ds-labeling-home/ds-health-warning)
   - [TTB — Distilled Spirits Labeling: Checklist of Mandatory Label Information](https://www.ttb.gov/regulated-commodities/beverage-alcohol/distilled-spirits/ds-labeling-home/ds-checklist)
   - Real TTB rules also require "GOVERNMENT WARNING" specifically to be in
-    **bold** type (with the rest of the statement *not* bold), a minimum type
-    size that scales with container volume, and visual separation/contrast
-    from other label text. None of that is verifiable from OCR/vision text
-    extraction, so this prototype only checks wording and capitalization —
+    **bold** type (with the rest of the statement *not* bold), visual
+    separation/contrast from other label text, and a minimum type size that
+    scales with container volume. The bold and separation checks are now
+    covered (see "How it works" above) via a vision model's visual judgment
+    on the photo — a genuine assessment, but not a pixel measurement, so
+    treat borderline cases as informative rather than authoritative. The
+    minimum-type-size-vs-container-volume rule is **still not checked**: it
+    requires a physical measurement (point size against a known container
+    volume) that isn't recoverable from a photo with no scale reference —
     documented here as a deliberate scope cut, not an oversight.
 - **Brand name / class-type layout heuristic.** The OCR-only field parser
   (`lib/parseFields.ts`) assumes a top-to-bottom label layout (brand, then
@@ -141,28 +161,43 @@ explicitly tells Vercel to bundle those files.
   way here.
 - **Cold-start latency.** The very first request to a fresh server instance
   pays a one-time cost to initialize the OCR worker (~6-9s in testing);
-  every request after that on the same warm instance lands at ~2.5-3.5s,
-  well inside the 5-second target. Serverless deployments (Vercel included)
-  will re-pay this cost after periods of no traffic scale an instance to
-  zero — a production version would want a keep-warm ping or a dedicated
-  long-running OCR worker to avoid that first-request penalty.
+  every request after that on the same warm instance lands at ~2.5-3.5s for
+  OCR alone. Serverless deployments (Vercel included) will re-pay this cost
+  after periods of no traffic scale an instance to zero — a production
+  version would want a keep-warm ping or a dedicated long-running OCR
+  worker to avoid that first-request penalty.
+- **The formatting check adds a vision call — and its latency — to every
+  single request**, not just low-confidence ones. Measured around 3.8-4.8s
+  total (OCR + vision) in testing against the deployed function, which
+  still lands inside the 5-second target but with much less headroom than
+  the OCR-only path had; a slow or rate-limited Anthropic API response
+  would now affect every check, not just the subset that used to need
+  vision. This was a deliberate trade — accurate formatting verification was
+  judged worth it — but it's worth watching in aggregate usage/latency
+  metrics if this moves beyond a prototype.
 - **Public-deployment cost/abuse guardrails are best-effort, not
   production-grade.** This demo calls a paid API from a public URL, so
   `lib/rateLimit.ts` adds a simple in-memory per-IP rate limit and
-  `lib/limits.ts` caps image size (8MB) and batch size (40 images). The rate
-  limiter is per-instance in-memory, which is fine for a prototype but would
-  need a shared store (e.g. Redis) for a real multi-instance deployment.
+  `lib/limits.ts` caps image size (8MB) and batch size (40 images). Because
+  the formatting check now calls the API on every request (see above), the
+  per-request cost floor is higher than before, and batch mode's rate limit
+  (3 batches / 10 min / IP) is what mainly bounds cost, since a single batch
+  can be up to 40 images × 1 vision call each. The rate limiter is also
+  per-instance in-memory, which is fine for a prototype but would need a
+  shared store (e.g. Redis) for a real multi-instance deployment.
 - **No persistence, no auth** — per the "don't store anything sensitive for
   this exercise" guidance; every request is processed and discarded.
 
 ## Testing
 
 `npm test` runs unit tests (`lib/__tests__/compare.test.ts`) covering the
-comparison/verdict logic: clean matches, case/punctuation-only differences
-(pass), near-miss typos (needs review), genuine mismatches (fail), unit
-conversion for net contents, and all the Government Warning failure modes
-(missing, reworded, wrong case).
+comparison/verdict logic: clean matches, case/punctuation-only and
+abbreviated-name differences (pass), near-miss typos (needs review), genuine
+mismatches (fail), unit conversion for net contents, all the Government
+Warning wording failure modes (missing, reworded, wrong case), and all the
+warning formatting outcomes (bold lead-in missing, body also bold, not
+visually separated, warning not locatable, no vision check available).
 
-The full pipeline (OCR → vision fallback → compare) was exercised end-to-end
-against the synthetic labels in `test-labels/`, both via direct API calls and
-by driving the actual UI in a browser, for both single-label and batch flows.
+The full pipeline (OCR → vision → compare) was exercised end-to-end against
+the synthetic labels in `test-labels/` and against the deployed Vercel
+function directly via `curl`, for both single-label and batch flows.
