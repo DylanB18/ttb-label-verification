@@ -84,6 +84,8 @@ function mergeFields(ocrFields: LabelFields, visionFields: LabelFields): LabelFi
     classType: visionFields.classType ?? ocrFields.classType,
     alcoholContent: visionFields.alcoholContent ?? ocrFields.alcoholContent,
     netContents: visionFields.netContents ?? ocrFields.netContents,
+    nameAddress: visionFields.nameAddress ?? ocrFields.nameAddress,
+    countryOfOrigin: visionFields.countryOfOrigin ?? ocrFields.countryOfOrigin,
     governmentWarning: visionFields.governmentWarning ?? ocrFields.governmentWarning,
   };
 }

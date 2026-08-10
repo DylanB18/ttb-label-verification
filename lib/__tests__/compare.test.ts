@@ -3,10 +3,14 @@ import { buildVerdict } from "../compare";
 import { CANONICAL_GOVERNMENT_WARNING, type ExpectedFields, type LabelFields, type WarningFormatCheck } from "../types";
 
 const expected: ExpectedFields = {
+  beverageType: "spirits",
   brandName: "Old Tom Distillery",
   classType: "Kentucky Straight Bourbon Whiskey",
   alcoholContent: "45%",
   netContents: "750 mL",
+  nameAddress: "Old Tom Distillery, Louisville, KY",
+  isImport: false,
+  countryOfOrigin: "",
 };
 
 const matchingLabel: LabelFields = {
@@ -14,6 +18,8 @@ const matchingLabel: LabelFields = {
   classType: "Kentucky Straight Bourbon Whiskey",
   alcoholContent: "45% Alc./Vol. (90 Proof)",
   netContents: "750 mL",
+  nameAddress: "BOTTLED BY OLD TOM DISTILLERY, LOUISVILLE, KY",
+  countryOfOrigin: null,
   governmentWarning: CANONICAL_GOVERNMENT_WARNING,
 };
 
@@ -174,5 +180,208 @@ describe("buildVerdict", () => {
     const check: WarningFormatCheck = { boldLeadIn: null, restNotBold: null, visuallySeparated: null, notes: null };
     const { fields } = buildVerdict(matchingLabel, expected, check);
     expect(fieldFor(fields, "governmentWarningFormat").status).toBe("fail");
+  });
+
+  describe("name & address", () => {
+    it("fails when no name/address statement was found on the label", () => {
+      const label: LabelFields = { ...matchingLabel, nameAddress: null };
+      const { fields } = buildVerdict(label, expected);
+      const result = fieldFor(fields, "nameAddress");
+      expect(result.status).toBe("fail");
+      expect(result.reason).toMatch(/not found/i);
+    });
+
+    it("flags a near-miss name/address (likely OCR misread) as needs_review", () => {
+      const label: LabelFields = { ...matchingLabel, nameAddress: "OLD TIM DISTILLERY, LOUISVILLE, KY" };
+      const { fields } = buildVerdict(label, expected);
+      expect(fieldFor(fields, "nameAddress").status).toBe("needs_review");
+    });
+
+    it("fails a genuinely different name/address", () => {
+      const label: LabelFields = { ...matchingLabel, nameAddress: "BOTTLED BY COMPLETELY DIFFERENT COMPANY, MIAMI, FL" };
+      const { fields } = buildVerdict(label, expected);
+      expect(fieldFor(fields, "nameAddress").status).toBe("fail");
+    });
+  });
+
+  describe("country of origin", () => {
+    it("passes automatically when the product is domestic — not required", () => {
+      const label: LabelFields = { ...matchingLabel, countryOfOrigin: null };
+      const { fields } = buildVerdict(label, expected);
+      const result = fieldFor(fields, "countryOfOrigin");
+      expect(result.status).toBe("pass");
+      expect(result.reason).toMatch(/domestic/i);
+    });
+
+    it("fails when the product is marked as an import but no country statement is on the label", () => {
+      const exp: ExpectedFields = { ...expected, isImport: true, countryOfOrigin: "France" };
+      const label: LabelFields = { ...matchingLabel, countryOfOrigin: null };
+      const { fields } = buildVerdict(label, exp);
+      expect(fieldFor(fields, "countryOfOrigin").status).toBe("fail");
+    });
+
+    it("passes an import when the label states the expected country, alongside an explanatory phrase", () => {
+      const exp: ExpectedFields = { ...expected, isImport: true, countryOfOrigin: "France" };
+      const label: LabelFields = { ...matchingLabel, countryOfOrigin: "PRODUCT OF FRANCE" };
+      const { fields } = buildVerdict(label, exp);
+      expect(fieldFor(fields, "countryOfOrigin").status).toBe("pass");
+    });
+
+    it("fails an import when the label states a different country than the application", () => {
+      const exp: ExpectedFields = { ...expected, isImport: true, countryOfOrigin: "France" };
+      const label: LabelFields = { ...matchingLabel, countryOfOrigin: "PRODUCT OF ITALY" };
+      const { fields } = buildVerdict(label, exp);
+      expect(fieldFor(fields, "countryOfOrigin").status).toBe("fail");
+    });
+
+    it("flags needs_review when marked as an import but the application didn't supply a country", () => {
+      const exp: ExpectedFields = { ...expected, isImport: true, countryOfOrigin: "" };
+      const label: LabelFields = { ...matchingLabel, countryOfOrigin: "PRODUCT OF FRANCE" };
+      const { fields } = buildVerdict(label, exp);
+      const result = fieldFor(fields, "countryOfOrigin");
+      expect(result.status).toBe("needs_review");
+      expect(result.reason).toMatch(/didn't supply/i);
+    });
+  });
+
+  describe("standard of fill", () => {
+    it("passes for beer at any container size — no federal standard of fill applies", () => {
+      const exp: ExpectedFields = { ...expected, beverageType: "beer" };
+      const label: LabelFields = { ...matchingLabel, netContents: "333 mL" };
+      const { fields } = buildVerdict(label, exp);
+      const result = fieldFor(fields, "standardOfFill");
+      expect(result.status).toBe("pass");
+      expect(result.reason).toMatch(/no standard of fill/i);
+    });
+
+    it("fails for spirits at a non-standard container size (700 mL)", () => {
+      const exp: ExpectedFields = { ...expected, netContents: "700 mL" };
+      const label: LabelFields = { ...matchingLabel, netContents: "700 mL" };
+      const { fields } = buildVerdict(label, exp);
+      expect(fieldFor(fields, "standardOfFill").status).toBe("fail");
+    });
+
+    it("flags 500 mL spirits as needs_review — a legacy pre-1989 standard, not currently authorized", () => {
+      const exp: ExpectedFields = { ...expected, netContents: "500 mL" };
+      const label: LabelFields = { ...matchingLabel, netContents: "500 mL" };
+      const { fields } = buildVerdict(label, exp);
+      const result = fieldFor(fields, "standardOfFill");
+      expect(result.status).toBe("needs_review");
+      expect(result.reason).toMatch(/1989/);
+    });
+
+    it("passes wine at a current standard size (375 mL)", () => {
+      const exp: ExpectedFields = { ...expected, beverageType: "wine", netContents: "375 mL" };
+      const label: LabelFields = { ...matchingLabel, netContents: "375 mL" };
+      const { fields } = buildVerdict(label, exp);
+      expect(fieldFor(fields, "standardOfFill").status).toBe("pass");
+    });
+
+    it("fails wine at a non-standard size (600 mL)", () => {
+      const exp: ExpectedFields = { ...expected, beverageType: "wine", netContents: "600 mL" };
+      const label: LabelFields = { ...matchingLabel, netContents: "600 mL" };
+      const { fields } = buildVerdict(label, exp);
+      expect(fieldFor(fields, "standardOfFill").status).toBe("fail");
+    });
+
+    it("passes wine bulk containers (4-17L) filled in whole liters", () => {
+      const exp: ExpectedFields = { ...expected, beverageType: "wine", netContents: "5 L" };
+      const label: LabelFields = { ...matchingLabel, netContents: "5 L" };
+      const { fields } = buildVerdict(label, exp);
+      expect(fieldFor(fields, "standardOfFill").status).toBe("pass");
+    });
+
+    it("fails wine bulk containers (4-17L) that aren't a whole liter", () => {
+      const exp: ExpectedFields = { ...expected, beverageType: "wine", netContents: "4.5 L" };
+      const label: LabelFields = { ...matchingLabel, netContents: "4.5 L" };
+      const { fields } = buildVerdict(label, exp);
+      expect(fieldFor(fields, "standardOfFill").status).toBe("fail");
+    });
+
+    it("passes wine at 18L+ — no metric standard-of-fill restriction", () => {
+      const exp: ExpectedFields = { ...expected, beverageType: "wine", netContents: "20 L" };
+      const label: LabelFields = { ...matchingLabel, netContents: "20 L" };
+      const { fields } = buildVerdict(label, exp);
+      expect(fieldFor(fields, "standardOfFill").status).toBe("pass");
+    });
+
+    it("flags needs_review when the container size can't be parsed", () => {
+      const label: LabelFields = { ...matchingLabel, netContents: "a lot" };
+      const { fields } = buildVerdict(label, expected);
+      expect(fieldFor(fields, "standardOfFill").status).toBe("needs_review");
+    });
+  });
+
+  describe("beverage-type-specific alcohol content rules", () => {
+    it("passes wine ABV omitted from the label when at/below 14% and class/type reads Table Wine (exemption)", () => {
+      const exp: ExpectedFields = { ...expected, beverageType: "wine", alcoholContent: "13%", classType: "Red Table Wine" };
+      const label: LabelFields = { ...matchingLabel, alcoholContent: null, classType: "Red Table Wine" };
+      const { fields } = buildVerdict(label, exp);
+      const result = fieldFor(fields, "alcoholContent");
+      expect(result.status).toBe("pass");
+      expect(result.reason).toMatch(/optional/i);
+    });
+
+    it("flags needs_review when wine ABV is omitted, application is at/below 14%, but class/type doesn't show the exemption", () => {
+      const exp: ExpectedFields = { ...expected, beverageType: "wine", alcoholContent: "13%", classType: "Chardonnay" };
+      const label: LabelFields = { ...matchingLabel, alcoholContent: null, classType: "Chardonnay" };
+      const { fields } = buildVerdict(label, exp);
+      expect(fieldFor(fields, "alcoholContent").status).toBe("needs_review");
+    });
+
+    it("fails wine ABV omitted from the label when application is above 14% — exemption doesn't apply", () => {
+      const exp: ExpectedFields = { ...expected, beverageType: "wine", alcoholContent: "16%", classType: "Port" };
+      const label: LabelFields = { ...matchingLabel, alcoholContent: null, classType: "Port" };
+      const { fields } = buildVerdict(label, exp);
+      expect(fieldFor(fields, "alcoholContent").status).toBe("fail");
+    });
+
+    it("applies wine's wider tolerance (±1.5 points) at or below 14% ABV", () => {
+      const exp: ExpectedFields = { ...expected, beverageType: "wine", alcoholContent: "12%" };
+      const passLabel: LabelFields = { ...matchingLabel, alcoholContent: "13.4% Alc./Vol." };
+      const failLabel: LabelFields = { ...matchingLabel, alcoholContent: "13.6% Alc./Vol." };
+      expect(fieldFor(buildVerdict(passLabel, exp).fields, "alcoholContent").status).toBe("pass");
+      expect(fieldFor(buildVerdict(failLabel, exp).fields, "alcoholContent").status).toBe("fail");
+    });
+
+    it("applies wine's tighter tolerance (±1 point) above 14% ABV", () => {
+      const exp: ExpectedFields = { ...expected, beverageType: "wine", alcoholContent: "18%" };
+      const passLabel: LabelFields = { ...matchingLabel, alcoholContent: "18.9% Alc./Vol." };
+      const failLabel: LabelFields = { ...matchingLabel, alcoholContent: "19.1% Alc./Vol." };
+      expect(fieldFor(buildVerdict(passLabel, exp).fields, "alcoholContent").status).toBe("pass");
+      expect(fieldFor(buildVerdict(failLabel, exp).fields, "alcoholContent").status).toBe("fail");
+    });
+
+    it("passes beer ABV omitted from the label — disclosure is optional under federal law", () => {
+      const exp: ExpectedFields = { ...expected, beverageType: "beer", alcoholContent: "5%" };
+      const label: LabelFields = { ...matchingLabel, alcoholContent: null };
+      const { fields } = buildVerdict(label, exp);
+      const result = fieldFor(fields, "alcoholContent");
+      expect(result.status).toBe("pass");
+      expect(result.reason).toMatch(/optional/i);
+    });
+
+    it("applies beer's ±0.3 point ABV tolerance", () => {
+      const exp: ExpectedFields = { ...expected, beverageType: "beer", alcoholContent: "5.0%" };
+      const passLabel: LabelFields = { ...matchingLabel, alcoholContent: "5.3% Alc./Vol." };
+      const failLabel: LabelFields = { ...matchingLabel, alcoholContent: "5.4% Alc./Vol." };
+      expect(fieldFor(buildVerdict(passLabel, exp).fields, "alcoholContent").status).toBe("pass");
+      expect(fieldFor(buildVerdict(failLabel, exp).fields, "alcoholContent").status).toBe("fail");
+    });
+
+    it("applies the standard ±0.15 point spirits ABV tolerance for ordinary bottle sizes", () => {
+      const exp: ExpectedFields = { ...expected, alcoholContent: "40%", netContents: "750 mL" };
+      const passLabel: LabelFields = { ...matchingLabel, alcoholContent: "40.1% Alc./Vol.", netContents: "750 mL" };
+      const failLabel: LabelFields = { ...matchingLabel, alcoholContent: "40.2% Alc./Vol.", netContents: "750 mL" };
+      expect(fieldFor(buildVerdict(passLabel, exp).fields, "alcoholContent").status).toBe("pass");
+      expect(fieldFor(buildVerdict(failLabel, exp).fields, "alcoholContent").status).toBe("fail");
+    });
+
+    it("applies the wider ±0.25 point spirits ABV tolerance for 50/100 mL mini bottles", () => {
+      const exp: ExpectedFields = { ...expected, alcoholContent: "40%", netContents: "50 mL" };
+      const label: LabelFields = { ...matchingLabel, alcoholContent: "40.2% Alc./Vol.", netContents: "50 mL" };
+      // 0.2-point gap would fail at the standard 0.15 tolerance but passes under the 0.25 mini-bottle tolerance.
+      expect(fieldFor(buildVerdict(label, exp).fields, "alcoholContent").status).toBe("pass");
+    });
   });
 });

@@ -102,7 +102,12 @@ export default function BatchLabelPage() {
             1 — Application details (CSV or JSON)
           </label>
           <p className="text-sm text-ink/60 mb-2">
-            One row per label, with a <code className="font-mono">fileName</code> that matches an uploaded image&apos;s file name.{" "}
+            One row per label, with a <code className="font-mono">fileName</code> that matches an uploaded image&apos;s file name.
+            Columns: <code className="font-mono">beverageType</code> (beer/wine/spirits — defaults to spirits if omitted),{" "}
+            <code className="font-mono">brandName</code>, <code className="font-mono">classType</code>,{" "}
+            <code className="font-mono">alcoholContent</code>, <code className="font-mono">netContents</code>,{" "}
+            <code className="font-mono">nameAddress</code>, <code className="font-mono">isImport</code> (true/false), and{" "}
+            <code className="font-mono">countryOfOrigin</code> (required when isImport is true).{" "}
             <a href="/batch-template.csv" download className="text-navy underline decoration-brass decoration-2 underline-offset-2">
               Download a template CSV
             </a>

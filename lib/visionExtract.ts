@@ -26,7 +26,7 @@ const LOCAL_VISION_MODEL = process.env.LOCAL_VISION_MODEL ?? "llava";
 // about the image itself, not something OCR text can ever tell you — this is
 // why every request goes through vision now, not just low-confidence OCR.
 const ASSESSMENT_INSTRUCTIONS =
-  "Extract the label fields from this alcohol beverage label photo, and separately assess the Government Warning statement's formatting. Transcribe the brand name and class/type exactly as printed on the label — do not expand abbreviations, complete a shortened name, or substitute a fuller name you may know from outside knowledge; the application may legitimately use a shortened or abbreviated form, and that comparison is handled downstream. Preserve exact capitalization and punctuation as printed for the extracted fields, especially the government warning text, since that field is checked word-for-word against the required federal wording. Separately, for formatting: TTB regulations require the \"GOVERNMENT WARNING:\" lead-in to be printed in bold type, the rest of the statement to NOT be bold, and the whole statement to be visually set off from other label text (its own block, not buried in or run together with unrelated text). Assess this based only on what's visually apparent in the image.";
+  "Extract the label fields from this alcohol beverage label photo, and separately assess the Government Warning statement's formatting. Transcribe the brand name, class/type, name & address statement, and country of origin exactly as printed on the label — do not expand abbreviations, complete a shortened name, or substitute a fuller name you may know from outside knowledge; the application may legitimately use a shortened or abbreviated form, and that comparison is handled downstream. Preserve exact capitalization and punctuation as printed for the extracted fields, especially the government warning text, since that field is checked word-for-word against the required federal wording. The name & address statement is the bottler/producer/importer line, usually preceded by a phrase like \"BOTTLED BY\", \"DISTILLED BY\", \"BREWED BY\", or \"IMPORTED BY\" — transcribe the whole line including that phrase. Country of origin only appears on imported products, usually as \"PRODUCT OF ___\" or \"PRODUCED IN ___\" — leave it null if the label doesn't show one. Separately, for formatting: TTB regulations require the \"GOVERNMENT WARNING:\" lead-in to be printed in bold type, the rest of the statement to NOT be bold, and the whole statement to be visually set off from other label text (its own block, not buried in or run together with unrelated text). Assess this based only on what's visually apparent in the image.";
 
 const ASSESSMENT_TOOL = {
   name: "assess_label",
@@ -38,6 +38,14 @@ const ASSESSMENT_TOOL = {
       classType: { type: ["string", "null"], description: "The class/type designation (e.g. 'Kentucky Straight Bourbon Whiskey'), or null." },
       alcoholContent: { type: ["string", "null"], description: "The alcohol content text as printed (e.g. '45% Alc./Vol. (90 Proof)'), or null." },
       netContents: { type: ["string", "null"], description: "The net contents text as printed (e.g. '750 mL'), or null." },
+      nameAddress: {
+        type: ["string", "null"],
+        description: "The bottler/producer/importer name & address statement as printed, including its preceding phrase (e.g. 'BOTTLED BY Old Tom Distillery, Louisville, KY'), or null if not visible.",
+      },
+      countryOfOrigin: {
+        type: ["string", "null"],
+        description: "The country-of-origin statement as printed (e.g. 'PRODUCT OF FRANCE'), or null if not present — this only appears on imported products.",
+      },
       governmentWarning: {
         type: ["string", "null"],
         description: "The full government warning statement, transcribed exactly as printed with original capitalization and punctuation preserved, or null if not present.",
@@ -61,6 +69,8 @@ const ASSESSMENT_TOOL = {
       "classType",
       "alcoholContent",
       "netContents",
+      "nameAddress",
+      "countryOfOrigin",
       "governmentWarning",
       "boldLeadIn",
       "restNotBold",
@@ -127,7 +137,7 @@ async function runVisionAssessmentAnthropic(imageBuffer: Buffer, mediaType: Supp
 async function runVisionAssessmentLocal(imageBuffer: Buffer): Promise<VisionAssessment> {
   const base64 = imageBuffer.toString("base64");
 
-  const prompt = `${ASSESSMENT_INSTRUCTIONS} Respond with ONLY a JSON object with exactly these keys: brandName, classType, alcoholContent, netContents, governmentWarning (each a string, or JSON null if not visible), boldLeadIn, restNotBold, visuallySeparated (each JSON true/false, or null if the warning isn't visible at all), and formattingNotes (a short string or null). Do not include any text outside the JSON object.`;
+  const prompt = `${ASSESSMENT_INSTRUCTIONS} Respond with ONLY a JSON object with exactly these keys: brandName, classType, alcoholContent, netContents, nameAddress, countryOfOrigin, governmentWarning (each a string, or JSON null if not visible), boldLeadIn, restNotBold, visuallySeparated (each JSON true/false, or null if the warning isn't visible at all), and formattingNotes (a short string or null). Do not include any text outside the JSON object.`;
 
   const response = await fetch(LOCAL_VISION_URL, {
     method: "POST",
@@ -171,6 +181,8 @@ function coerceAssessment(value: unknown): VisionAssessment {
       classType: asString(obj.classType),
       alcoholContent: asString(obj.alcoholContent),
       netContents: asString(obj.netContents),
+      nameAddress: asString(obj.nameAddress),
+      countryOfOrigin: asString(obj.countryOfOrigin),
       governmentWarning: asString(obj.governmentWarning),
     },
     warningFormat: {

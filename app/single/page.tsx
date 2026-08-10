@@ -6,15 +6,19 @@ import ResultChecklist from "@/components/ResultChecklist";
 import ProcessingIndicator from "@/components/ProcessingIndicator";
 import { SAMPLE_LABELS, type SampleLabel } from "@/lib/sampleLabels";
 import { MAX_IMAGE_BYTES } from "@/lib/limits";
-import type { VerificationResult } from "@/lib/types";
+import type { BeverageType, VerificationResult } from "@/lib/types";
 
 export default function SingleLabelPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [beverageType, setBeverageType] = useState<BeverageType>("spirits");
   const [brandName, setBrandName] = useState("");
   const [classType, setClassType] = useState("");
   const [alcoholContent, setAlcoholContent] = useState("");
   const [netContents, setNetContents] = useState("");
+  const [nameAddress, setNameAddress] = useState("");
+  const [isImport, setIsImport] = useState(false);
+  const [countryOfOrigin, setCountryOfOrigin] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<VerificationResult | null>(null);
@@ -48,10 +52,14 @@ export default function SingleLabelPage() {
     setImageFile(file);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(URL.createObjectURL(file));
+    setBeverageType(sample.expected.beverageType);
     setBrandName(sample.expected.brandName);
     setClassType(sample.expected.classType);
     setAlcoholContent(sample.expected.alcoholContent);
     setNetContents(sample.expected.netContents);
+    setNameAddress(sample.expected.nameAddress);
+    setIsImport(sample.expected.isImport);
+    setCountryOfOrigin(sample.expected.countryOfOrigin);
     setActiveSample(sample.fileName);
   }
 
@@ -61,6 +69,10 @@ export default function SingleLabelPage() {
       setError("Please choose a label image.");
       return;
     }
+    if (isImport && !countryOfOrigin.trim()) {
+      setError("Country of origin is required when the product is marked as an import.");
+      return;
+    }
     setLoading(true);
     setError(null);
     setResult(null);
@@ -68,10 +80,14 @@ export default function SingleLabelPage() {
     try {
       const form = new FormData();
       form.set("image", imageFile);
+      form.set("beverageType", beverageType);
       form.set("brandName", brandName);
       form.set("classType", classType);
       form.set("alcoholContent", alcoholContent);
       form.set("netContents", netContents);
+      form.set("nameAddress", nameAddress);
+      form.set("isImport", String(isImport));
+      form.set("countryOfOrigin", countryOfOrigin);
 
       const res = await fetch("/api/verify", { method: "POST", body: form });
       const data = await res.json();
@@ -133,10 +149,56 @@ export default function SingleLabelPage() {
         <fieldset className="space-y-4 rounded-lg border border-ink/15 p-4">
           <legend className="px-2 text-xs font-semibold uppercase tracking-[0.1em] text-ink/60">2 — What the application says</legend>
 
+          <div>
+            <label htmlFor="beverageType" className="block text-base font-semibold mb-1 text-ink">
+              Beverage Type
+            </label>
+            <select
+              id="beverageType"
+              value={beverageType}
+              onChange={(e) => setBeverageType(e.target.value as BeverageType)}
+              className="block w-full rounded-md border border-ink/25 bg-paper p-3 font-mono text-base"
+            >
+              <option value="spirits">Distilled Spirits</option>
+              <option value="wine">Wine</option>
+              <option value="beer">Beer / Malt Beverage</option>
+            </select>
+            <p className="mt-1 text-sm text-ink/60">
+              Determines which rules apply — e.g. wine may omit alcohol content at or below 14% ABV, beer&apos;s alcohol content is
+              federally optional, and legal container sizes differ by type.
+            </p>
+          </div>
+
           <Field id="brandName" label="Brand Name" value={brandName} onChange={setBrandName} placeholder="e.g. Old Tom Distillery" />
           <Field id="classType" label="Class / Type" value={classType} onChange={setClassType} placeholder="e.g. Kentucky Straight Bourbon Whiskey" />
           <Field id="alcoholContent" label="Alcohol Content" value={alcoholContent} onChange={setAlcoholContent} placeholder="e.g. 45%" />
           <Field id="netContents" label="Net Contents" value={netContents} onChange={setNetContents} placeholder="e.g. 750 mL" />
+          <Field
+            id="nameAddress"
+            label="Bottler / Producer / Importer Name & Address"
+            value={nameAddress}
+            onChange={setNameAddress}
+            placeholder="e.g. Old Tom Distillery, Louisville, KY"
+          />
+
+          <div>
+            <label className="flex items-center gap-2 text-base font-semibold text-ink">
+              <input type="checkbox" checked={isImport} onChange={(e) => setIsImport(e.target.checked)} className="h-5 w-5" />
+              This product is imported
+            </label>
+            {isImport && (
+              <div className="mt-3">
+                <Field
+                  id="countryOfOrigin"
+                  label="Country of Origin"
+                  value={countryOfOrigin}
+                  onChange={setCountryOfOrigin}
+                  placeholder="e.g. France"
+                />
+              </div>
+            )}
+          </div>
+
           <p className="text-sm text-ink/60">
             The government warning statement is checked automatically against the required federal wording — no need to enter it.
           </p>

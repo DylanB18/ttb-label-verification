@@ -1,2 +1,2 @@
-fileName,brandName,classType,alcoholContent,netContents
-old-tom-distillery.png,Old Tom Distillery,Kentucky Straight Bourbon Whiskey,45%,750 mL
+fileName,beverageType,brandName,classType,alcoholContent,netContents,nameAddress,isImport,countryOfOrigin
+old-tom-distillery.png,spirits,Old Tom Distillery,Kentucky Straight Bourbon Whiskey,45%,750 mL,"Old Tom Distillery, Louisville, KY",false,

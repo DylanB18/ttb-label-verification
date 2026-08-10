@@ -39,8 +39,13 @@ function wrapText(text: string, maxChars: number): string[] {
 interface LabelSpec {
   brandName: string;
   classType: string;
+  /** Omit (empty string) to render a label with no ABV line — used for the wine-exemption and beer-optional-ABV samples. */
   abvLine: string;
   netLine: string;
+  /** Bottler/producer/importer line, e.g. "BOTTLED BY OLD TOM DISTILLERY, LOUISVILLE, KY". Must appear before the warning — parseFields.ts stops recognizing anything once the warning block starts. */
+  nameAddressLine: string;
+  /** Only set for imports, e.g. "PRODUCT OF SCOTLAND". */
+  countryOfOriginLine?: string;
   warningLines: string[];
 }
 
@@ -59,16 +64,31 @@ function buildSvg(spec: LabelSpec): string {
   parts.push(
     `<text x="${WIDTH / 2}" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="30" text-anchor="middle">${escapeXml(spec.classType)}</text>`,
   );
-  y += 90;
-  parts.push(
-    `<text x="${WIDTH / 2}" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="26" text-anchor="middle">${escapeXml(spec.abvLine)}</text>`,
-  );
+
+  if (spec.abvLine) {
+    y += 90;
+    parts.push(
+      `<text x="${WIDTH / 2}" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="26" text-anchor="middle">${escapeXml(spec.abvLine)}</text>`,
+    );
+  }
   y += 50;
   parts.push(
     `<text x="${WIDTH / 2}" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="26" text-anchor="middle">${escapeXml(spec.netLine)}</text>`,
   );
 
-  y += 90;
+  y += 50;
+  parts.push(
+    `<text x="${WIDTH / 2}" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="18" text-anchor="middle">${escapeXml(spec.nameAddressLine)}</text>`,
+  );
+
+  if (spec.countryOfOriginLine) {
+    y += 30;
+    parts.push(
+      `<text x="${WIDTH / 2}" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="18" text-anchor="middle">${escapeXml(spec.countryOfOriginLine)}</text>`,
+    );
+  }
+
+  y += 70;
   for (const line of spec.warningLines) {
     parts.push(
       `<text x="${WIDTH / 2}" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="20" text-anchor="middle">${escapeXml(line)}</text>`,
@@ -97,12 +117,15 @@ const REWORDED_WARNING_LINES = wrapText(
   60,
 );
 
+const OLD_TOM_NAME_ADDRESS = "BOTTLED BY OLD TOM DISTILLERY, LOUISVILLE, KY";
+
 const singleLabels: Record<string, LabelSpec> = {
   "clean-match-bourbon.png": {
     brandName: "OLD TOM DISTILLERY",
     classType: "Kentucky Straight Bourbon Whiskey",
     abvLine: "45% Alc./Vol. (90 Proof)",
     netLine: "750 mL",
+    nameAddressLine: OLD_TOM_NAME_ADDRESS,
     warningLines: CANONICAL_WARNING_LINES,
   },
   "brand-case-variant.png": {
@@ -110,6 +133,7 @@ const singleLabels: Record<string, LabelSpec> = {
     classType: "Kentucky Straight Bourbon Whiskey",
     abvLine: "45% Alc./Vol. (90 Proof)",
     netLine: "750 mL",
+    nameAddressLine: OLD_TOM_NAME_ADDRESS,
     warningLines: CANONICAL_WARNING_LINES,
   },
   "wrong-abv.png": {
@@ -117,6 +141,7 @@ const singleLabels: Record<string, LabelSpec> = {
     classType: "Kentucky Straight Bourbon Whiskey",
     abvLine: "40% Alc./Vol. (80 Proof)",
     netLine: "750 mL",
+    nameAddressLine: OLD_TOM_NAME_ADDRESS,
     warningLines: CANONICAL_WARNING_LINES,
   },
   "brand-typo-needs-review.png": {
@@ -124,6 +149,7 @@ const singleLabels: Record<string, LabelSpec> = {
     classType: "Kentucky Straight Bourbon Whiskey",
     abvLine: "45% Alc./Vol. (90 Proof)",
     netLine: "750 mL",
+    nameAddressLine: OLD_TOM_NAME_ADDRESS,
     warningLines: CANONICAL_WARNING_LINES,
   },
   "warning-title-case.png": {
@@ -131,6 +157,7 @@ const singleLabels: Record<string, LabelSpec> = {
     classType: "Kentucky Straight Bourbon Whiskey",
     abvLine: "45% Alc./Vol. (90 Proof)",
     netLine: "750 mL",
+    nameAddressLine: OLD_TOM_NAME_ADDRESS,
     warningLines: TITLE_CASE_WARNING_LINES,
   },
   "warning-reworded.png": {
@@ -138,6 +165,7 @@ const singleLabels: Record<string, LabelSpec> = {
     classType: "Kentucky Straight Bourbon Whiskey",
     abvLine: "45% Alc./Vol. (90 Proof)",
     netLine: "750 mL",
+    nameAddressLine: OLD_TOM_NAME_ADDRESS,
     warningLines: REWORDED_WARNING_LINES,
   },
   "missing-warning.png": {
@@ -145,16 +173,54 @@ const singleLabels: Record<string, LabelSpec> = {
     classType: "Kentucky Straight Bourbon Whiskey",
     abvLine: "45% Alc./Vol. (90 Proof)",
     netLine: "750 mL",
+    nameAddressLine: OLD_TOM_NAME_ADDRESS,
     warningLines: [],
+  },
+  "wine-table-wine-exempt.png": {
+    brandName: "FIELDSTONE VINEYARDS",
+    classType: "Red Table Wine",
+    abvLine: "", // deliberately omitted — legal under the wine <=14% ABV exemption when the class/type reads "Table Wine"
+    netLine: "750 mL",
+    nameAddressLine: "BOTTLED BY FIELDSTONE VINEYARDS, SONOMA, CA",
+    warningLines: CANONICAL_WARNING_LINES,
+  },
+  "beer-optional-abv.png": {
+    brandName: "HARBOR LIGHT BREWING",
+    classType: "Lager",
+    abvLine: "", // deliberately omitted — ABV disclosure is optional for malt beverages under federal law
+    netLine: "12 fl oz",
+    nameAddressLine: "BREWED BY HARBOR LIGHT BREWING CO., PORTLAND, OR",
+    warningLines: CANONICAL_WARNING_LINES,
+  },
+  "imported-scotch.png": {
+    brandName: "GLEN MUIR",
+    classType: "Blended Scotch Whisky",
+    abvLine: "43% Alc./Vol. (86 Proof)",
+    netLine: "750 mL",
+    nameAddressLine: "IMPORTED BY OLD TOM IMPORTS, ATLANTA, GA",
+    countryOfOriginLine: "PRODUCT OF SCOTLAND",
+    warningLines: CANONICAL_WARNING_LINES,
+  },
+  "nonstandard-fill.png": {
+    brandName: "OLD TOM DISTILLERY",
+    classType: "Kentucky Straight Bourbon Whiskey",
+    abvLine: "45% Alc./Vol. (90 Proof)",
+    netLine: "700 mL",
+    nameAddressLine: OLD_TOM_NAME_ADDRESS,
+    warningLines: CANONICAL_WARNING_LINES,
   },
 };
 
 interface BatchManifestEntry {
   fileName: string;
+  beverageType: "beer" | "wine" | "spirits";
   brandName: string;
   classType: string;
   alcoholContent: string;
   netContents: string;
+  nameAddress: string;
+  isImport: boolean;
+  countryOfOrigin: string;
 }
 
 const batchLabels: Array<{ fileName: string; spec: LabelSpec; manifest: BatchManifestEntry }> = [
@@ -165,9 +231,20 @@ const batchLabels: Array<{ fileName: string; spec: LabelSpec; manifest: BatchMan
       classType: "Vodka",
       abvLine: "40% Alc./Vol. (80 Proof)",
       netLine: "1 L",
+      nameAddressLine: "DISTILLED BY HARBORVIEW DISTILLING CO., SEATTLE, WA",
       warningLines: CANONICAL_WARNING_LINES,
     },
-    manifest: { fileName: "batch-01-pass.png", brandName: "Harborview Vodka", classType: "Vodka", alcoholContent: "40", netContents: "1 L" },
+    manifest: {
+      fileName: "batch-01-pass.png",
+      beverageType: "spirits",
+      brandName: "Harborview Vodka",
+      classType: "Vodka",
+      alcoholContent: "40",
+      netContents: "1 L",
+      nameAddress: "Harborview Distilling Co., Seattle, WA",
+      isImport: false,
+      countryOfOrigin: "",
+    },
   },
   {
     fileName: "batch-02-needs-review.png",
@@ -176,14 +253,19 @@ const batchLabels: Array<{ fileName: string; spec: LabelSpec; manifest: BatchMan
       classType: "American Single Malt Whiskey",
       abvLine: "43% Alc./Vol. (86 Proof)",
       netLine: "750 mL",
+      nameAddressLine: "DISTILLED AND BOTTLED BY REDWOOD RIDGE DISTILLERS, PORTLAND, OR",
       warningLines: CANONICAL_WARNING_LINES,
     },
     manifest: {
       fileName: "batch-02-needs-review.png",
+      beverageType: "spirits",
       brandName: "Redwood Ridge",
       classType: "American Single-Malt Whiskey",
       alcoholContent: "43",
       netContents: "750 mL",
+      nameAddress: "Redwood Ridge Distillers, Portland, OR",
+      isImport: false,
+      countryOfOrigin: "",
     },
   },
   {
@@ -193,9 +275,20 @@ const batchLabels: Array<{ fileName: string; spec: LabelSpec; manifest: BatchMan
       classType: "Gin",
       abvLine: "47% Alc./Vol. (94 Proof)",
       netLine: "750 mL",
+      nameAddressLine: "DISTILLED BY BLUE HERON DISTILLING, AUSTIN, TX",
       warningLines: CANONICAL_WARNING_LINES,
     },
-    manifest: { fileName: "batch-03-fail-abv.png", brandName: "Blue Heron Gin", classType: "Gin", alcoholContent: "40", netContents: "750 mL" },
+    manifest: {
+      fileName: "batch-03-fail-abv.png",
+      beverageType: "spirits",
+      brandName: "Blue Heron Gin",
+      classType: "Gin",
+      alcoholContent: "40",
+      netContents: "750 mL",
+      nameAddress: "Blue Heron Distilling, Austin, TX",
+      isImport: false,
+      countryOfOrigin: "",
+    },
   },
   {
     fileName: "batch-04-fail-warning.png",
@@ -204,17 +297,50 @@ const batchLabels: Array<{ fileName: string; spec: LabelSpec; manifest: BatchMan
       classType: "Tequila",
       abvLine: "40% Alc./Vol. (80 Proof)",
       netLine: "750 mL",
+      nameAddressLine: "IMPORTED BY SUNSET RANCH IMPORTS, EL PASO, TX",
+      countryOfOriginLine: "PRODUCT OF MEXICO",
       warningLines: TITLE_CASE_WARNING_LINES,
     },
     manifest: {
       fileName: "batch-04-fail-warning.png",
+      beverageType: "spirits",
       brandName: "Sunset Ranch Tequila",
       classType: "Tequila",
       alcoholContent: "40",
       netContents: "750 mL",
+      nameAddress: "Sunset Ranch Imports, El Paso, TX",
+      isImport: true,
+      countryOfOrigin: "Mexico",
+    },
+  },
+  {
+    fileName: "batch-05-wine-pass.png",
+    spec: {
+      brandName: "MEADOWBROOK CELLARS",
+      classType: "Chardonnay",
+      abvLine: "13.5% Alc./Vol.",
+      netLine: "750 mL",
+      nameAddressLine: "BOTTLED BY MEADOWBROOK CELLARS, NAPA, CA",
+      warningLines: CANONICAL_WARNING_LINES,
+    },
+    manifest: {
+      fileName: "batch-05-wine-pass.png",
+      beverageType: "wine",
+      brandName: "Meadowbrook Cellars",
+      classType: "Chardonnay",
+      alcoholContent: "13.5",
+      netContents: "750 mL",
+      nameAddress: "Meadowbrook Cellars, Napa, CA",
+      isImport: false,
+      countryOfOrigin: "",
     },
   },
 ];
+
+function csvField(value: string | boolean): string {
+  const s = String(value);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
 
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });
@@ -227,8 +353,22 @@ async function main() {
     await renderLabel(fileName, spec);
   }
 
-  const csvHeader = "fileName,brandName,classType,alcoholContent,netContents";
-  const csvRows = batchLabels.map(({ manifest }) => [manifest.fileName, manifest.brandName, manifest.classType, manifest.alcoholContent, manifest.netContents].join(","));
+  const csvHeader = "fileName,beverageType,brandName,classType,alcoholContent,netContents,nameAddress,isImport,countryOfOrigin";
+  const csvRows = batchLabels.map(({ manifest }) =>
+    [
+      manifest.fileName,
+      manifest.beverageType,
+      manifest.brandName,
+      manifest.classType,
+      manifest.alcoholContent,
+      manifest.netContents,
+      manifest.nameAddress,
+      manifest.isImport,
+      manifest.countryOfOrigin,
+    ]
+      .map(csvField)
+      .join(","),
+  );
   await writeFile(path.join(OUT_DIR, "batch-manifest.csv"), [csvHeader, ...csvRows].join("\n") + "\n");
   console.log("wrote batch-manifest.csv");
 }

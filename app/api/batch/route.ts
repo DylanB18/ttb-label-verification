@@ -5,12 +5,13 @@ import { OcrPool } from "@/lib/ocr";
 import { mapWithConcurrency } from "@/lib/concurrency";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { BATCH_RATE_LIMIT, MAX_BATCH_IMAGES, MAX_IMAGE_BYTES } from "@/lib/limits";
-import type { BatchManifestRow, BatchResultRow, ExpectedFields } from "@/lib/types";
+import type { BatchManifestRow, BatchResultRow, BeverageType, ExpectedFields } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const CONCURRENCY = 4;
+const BEVERAGE_TYPES: BeverageType[] = ["beer", "wine", "spirits"];
 
 function parseManifest(text: string): BatchManifestRow[] {
   const trimmed = text.trim();
@@ -25,12 +26,19 @@ function parseManifest(text: string): BatchManifestRow[] {
 }
 
 function normalizeRow(row: Record<string, string>): BatchManifestRow {
+  const rawBeverageType = (row.beverageType ?? "spirits").trim().toLowerCase();
+  const beverageType: BeverageType = BEVERAGE_TYPES.includes(rawBeverageType as BeverageType) ? (rawBeverageType as BeverageType) : "spirits";
+
   return {
     fileName: (row.fileName ?? row.filename ?? row.FileName ?? "").trim(),
+    beverageType,
     brandName: (row.brandName ?? "").trim(),
     classType: (row.classType ?? "").trim(),
     alcoholContent: (row.alcoholContent ?? "").trim(),
     netContents: (row.netContents ?? "").trim(),
+    nameAddress: (row.nameAddress ?? "").trim(),
+    isImport: (row.isImport ?? "").trim().toLowerCase() === "true",
+    countryOfOrigin: (row.countryOfOrigin ?? "").trim(),
   };
 }
 
@@ -89,10 +97,14 @@ export async function POST(req: NextRequest) {
       }
 
       const expected: ExpectedFields = {
+        beverageType: row.beverageType,
         brandName: row.brandName,
         classType: row.classType,
         alcoholContent: row.alcoholContent,
         netContents: row.netContents,
+        nameAddress: row.nameAddress,
+        isImport: row.isImport,
+        countryOfOrigin: row.countryOfOrigin,
       };
 
       try {

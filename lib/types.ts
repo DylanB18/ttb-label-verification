@@ -1,24 +1,52 @@
 export type FieldStatus = "pass" | "needs_review" | "fail";
 
+/**
+ * The three beverage categories TTB regulates under separate CFR parts (27
+ * CFR Part 25 malt beverages, Part 4 wine, Part 5 distilled spirits). Chosen
+ * explicitly by the applicant rather than inferred, since it determines
+ * which rule set applies (e.g. wine's ABV-disclosure exemption, beer's
+ * optional ABV statement, spirits' standards of fill) and getting it wrong
+ * silently would apply the wrong regulation.
+ */
+export type BeverageType = "beer" | "wine" | "spirits";
+
 /** Fields as extracted from a label image (OCR and/or vision fallback). */
 export interface LabelFields {
   brandName: string | null;
   classType: string | null;
   alcoholContent: string | null;
   netContents: string | null;
+  nameAddress: string | null;
+  countryOfOrigin: string | null;
   governmentWarning: string | null;
 }
 
 /** Fields as entered on the application (manual form or batch manifest). */
 export interface ExpectedFields {
+  beverageType: BeverageType;
   brandName: string;
   classType: string;
   alcoholContent: string;
   netContents: string;
+  /** Bottler/producer/importer name & address, e.g. "Old Tom Distillery, Louisville, KY". */
+  nameAddress: string;
+  /** Whether the applicant has declared this product as imported — gates the country-of-origin check. */
+  isImport: boolean;
+  /** Required only when isImport is true; ignored (and not checked) otherwise. */
+  countryOfOrigin: string;
 }
 
 export interface FieldResult {
-  field: "brandName" | "classType" | "alcoholContent" | "netContents" | "governmentWarning" | "governmentWarningFormat";
+  field:
+    | "brandName"
+    | "classType"
+    | "alcoholContent"
+    | "netContents"
+    | "standardOfFill"
+    | "nameAddress"
+    | "countryOfOrigin"
+    | "governmentWarning"
+    | "governmentWarningFormat";
   label: string;
   expected: string;
   extracted: string | null;

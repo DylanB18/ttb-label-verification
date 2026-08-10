@@ -91,6 +91,32 @@ this; only Vercel's own file tracing does.
   reference material, not part of the deliverable) — but the real fix is
   reviewing `git status --short` before staging, not the gitignore rule
   alone, since any new non-PDF stray file would slip through the same way.
+- **Verification is now beverage-type-aware** (`ExpectedFields.beverageType`,
+  set explicitly by the applicant via a dropdown/manifest column — not
+  inferred, since getting it wrong would silently apply the wrong CFR part).
+  The three `docs/*.pdf` files (TTB's Beverage Alcohol Manual volumes for
+  beer/wine/distilled spirits — user-provided, gitignored per the bullet
+  above, not tracked in the repo) were the source for this: wine may omit a
+  numeric ABV statement at/below 14% ABV when the class/type reads "Table
+  Wine"/"Light Wine" (27 CFR 4.36) and gets a wider tolerance there; beer's
+  ABV statement is federally optional outright; spirits get a tighter
+  tolerance that widens for 50/100mL containers. All three live in
+  `compareAbv`/`computeAbvTolerance` in `lib/compare.ts` — if you add a
+  fourth beverage type, that function (plus `compareStandardOfFill`, which
+  has the same per-type branching for legal container sizes) is where the
+  type-specific logic is centralized. `compareNameAddress` and
+  `compareCountryOfOrigin` reuse the same `matchText`/`isAbbreviationMatch`
+  subset-check as brand name/class-type, which is what lets them pass label
+  text that carries an explanatory phrase the application value doesn't
+  (e.g. "BOTTLED BY Old Tom Distillery..." vs "Old Tom Distillery...") for
+  free — don't reintroduce an exact-match-only comparator for those fields.
+  Country of origin is only checked when the applicant declares an import;
+  `parseFields.ts`'s OCR-only heuristic only recognizes name/address and
+  country-of-origin lines if they appear *before* the warning block (once
+  the warning starts, every subsequent line is swallowed into it).
+- **Batch manifests default a missing `beverageType` column to `spirits`**
+  (`app/api/batch/route.ts`'s `normalizeRow`), so manifests written before
+  this field existed keep working unchanged rather than erroring per-row.
 
 ## Design system ("modern federal digital service")
 
@@ -141,7 +167,7 @@ npm run dev                   # local dev (Turbopack)
 npm run build                 # production build — do this before deploying
 npm test                      # vitest, lib/__tests__/compare.test.ts
 npm run lint                  # eslint
-npm run generate-test-labels  # regenerate test-labels/ + public/samples/
+npm run generate-test-labels  # writes to test-labels/ only — cp the ones lib/sampleLabels.ts references into public/samples/ by hand
 vercel --prod                 # deploy (CLI already linked to dbober/ttb-label-verification)
 ```
 

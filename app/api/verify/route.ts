@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyLabel } from "@/lib/verifyPipeline";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { MAX_IMAGE_BYTES, VERIFY_RATE_LIMIT } from "@/lib/limits";
-import type { ExpectedFields } from "@/lib/types";
+import type { BeverageType, ExpectedFields } from "@/lib/types";
+
+const BEVERAGE_TYPES: BeverageType[] = ["beer", "wine", "spirits"];
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -24,15 +26,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Image is too large (max ${MAX_IMAGE_BYTES / (1024 * 1024)}MB).` }, { status: 400 });
   }
 
+  const beverageType = String(form.get("beverageType") ?? "").trim() as BeverageType;
+  if (!BEVERAGE_TYPES.includes(beverageType)) {
+    return NextResponse.json({ error: "Beverage type must be one of beer, wine, or spirits." }, { status: 400 });
+  }
+
+  const isImport = String(form.get("isImport") ?? "") === "true";
+
   const expected: ExpectedFields = {
+    beverageType,
     brandName: String(form.get("brandName") ?? "").trim(),
     classType: String(form.get("classType") ?? "").trim(),
     alcoholContent: String(form.get("alcoholContent") ?? "").trim(),
     netContents: String(form.get("netContents") ?? "").trim(),
+    nameAddress: String(form.get("nameAddress") ?? "").trim(),
+    isImport,
+    countryOfOrigin: String(form.get("countryOfOrigin") ?? "").trim(),
   };
 
-  if (!expected.brandName || !expected.classType || !expected.alcoholContent || !expected.netContents) {
-    return NextResponse.json({ error: "Brand name, class/type, alcohol content, and net contents are all required." }, { status: 400 });
+  if (!expected.brandName || !expected.classType || !expected.alcoholContent || !expected.netContents || !expected.nameAddress) {
+    return NextResponse.json(
+      { error: "Brand name, class/type, alcohol content, net contents, and name & address are all required." },
+      { status: 400 },
+    );
+  }
+
+  if (expected.isImport && !expected.countryOfOrigin) {
+    return NextResponse.json({ error: "Country of origin is required when the product is marked as an import." }, { status: 400 });
   }
 
   try {

@@ -1,5 +1,6 @@
-fileName,brandName,classType,alcoholContent,netContents
-batch-01-pass.png,Harborview Vodka,Vodka,40,1 L
-batch-02-needs-review.png,Redwood Ridge,American Single-Malt Whiskey,43,750 mL
-batch-03-fail-abv.png,Blue Heron Gin,Gin,40,750 mL
-batch-04-fail-warning.png,Sunset Ranch Tequila,Tequila,40,750 mL
+fileName,beverageType,brandName,classType,alcoholContent,netContents,nameAddress,isImport,countryOfOrigin
+batch-01-pass.png,spirits,Harborview Vodka,Vodka,40,1 L,"Harborview Distilling Co., Seattle, WA",false,
+batch-02-needs-review.png,spirits,Redwood Ridge,American Single-Malt Whiskey,43,750 mL,"Redwood Ridge Distillers, Portland, OR",false,
+batch-03-fail-abv.png,spirits,Blue Heron Gin,Gin,40,750 mL,"Blue Heron Distilling, Austin, TX",false,
+batch-04-fail-warning.png,spirits,Sunset Ranch Tequila,Tequila,40,750 mL,"Sunset Ranch Imports, El Paso, TX",true,Mexico
+batch-05-wine-pass.png,wine,Meadowbrook Cellars,Chardonnay,13.5,750 mL,"Meadowbrook Cellars, Napa, CA",false,
